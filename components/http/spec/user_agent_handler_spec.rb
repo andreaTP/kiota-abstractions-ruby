@@ -2,7 +2,6 @@
 
 require 'faraday'
 
-# frozen_string_literal: true
 RSpec.describe MicrosoftKiotaFaraday do
   user_agent_key = 'User-Agent'
   url = 'https://graph.microsoft.com/v1.0/users'

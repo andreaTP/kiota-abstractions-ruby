@@ -2,7 +2,6 @@
 
 require 'faraday'
 
-# frozen_string_literal: true
 RSpec.describe MicrosoftKiotaFaraday do
   it 'decodes encoded query parameters' do
     values = {}
