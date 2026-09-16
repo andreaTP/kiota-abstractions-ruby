@@ -7,6 +7,41 @@ RSpec.describe MicrosoftKiotaFaraday::FaradayRequestAdapter do
   let(:headers) { { 'content-type' => 'application/json' } }
   let(:body) { { key: 'value' }.to_json }
 
+  describe '#throw_if_failed_reponse' do
+    subject(:adapter) { described_class.new(authentication_provider, parse_node_factory) }
+
+    let(:parse_node_factory) { double('parse_node_factory') }
+    let(:parse_node) { double('parse_node') }
+    let(:error) { MicrosoftKiotaAbstractions::ApiError.new('bad name') }
+    let(:factory) { ->(_pn) { error } }
+    let(:response) { instance_double(Faraday::Response, status: 400, body:, headers:) }
+
+    before do
+      allow(parse_node_factory).to receive(:get_parse_node).with('application/json', body).and_return(parse_node)
+      allow(parse_node).to receive(:get_object_value).with(factory).and_return(error)
+    end
+
+    it 'matches an exact status code keyed as a String, the way generated clients write it' do
+      expect { adapter.throw_if_failed_reponse(response, { '400' => factory }) }
+        .to raise_error(error)
+    end
+
+    it 'still matches a wildcard key' do
+      expect { adapter.throw_if_failed_reponse(response, { '4XX' => factory }) }
+        .to raise_error(error)
+    end
+
+    it 'raises a generic ApiError when nothing matches' do
+      expect { adapter.throw_if_failed_reponse(response, { '404' => factory }) }
+        .to raise_error(MicrosoftKiotaAbstractions::ApiError, /no error factory is registered/)
+    end
+
+    it 'returns without raising for a successful response' do
+      ok = instance_double(Faraday::Response, status: 200, body:, headers:)
+      expect { adapter.throw_if_failed_reponse(ok, {}) }.not_to raise_error
+    end
+  end
+
   describe '#get_root_parse_node' do
     context 'when response is null' do
       it 'raises an error' do

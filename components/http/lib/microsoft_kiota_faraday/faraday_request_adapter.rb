@@ -85,7 +85,7 @@ module MicrosoftKiotaFaraday
       status_code = response.status
       return if status_code < 400
 
-      error_factory = errors_mapping[status_code] unless errors_mapping.nil?
+      error_factory = errors_mapping[status_code.to_s] unless errors_mapping.nil?
       error_factory = errors_mapping['4XX'] unless !error_factory.nil? || errors_mapping.nil? || status_code > 500
       unless !error_factory.nil? || errors_mapping.nil? || status_code < 500 || status_code > 600
         error_factory = errors_mapping['5XX']
