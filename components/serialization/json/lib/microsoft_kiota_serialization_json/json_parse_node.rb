@@ -108,18 +108,19 @@ module MicrosoftKiotaSerializationJson
     end
 
     def assign_field_values(item)
+      return unless @current_node.is_a?(Hash)
+
       fields = item.get_field_deserializers
       @current_node.each do |k, v|
         next if v.nil?
 
         deserializer = fields[k]
-        if deserializer
-          deserializer.call(JsonParseNode.new(v))
-        elsif item.additional_data
-          item.additional_data[k] = v
-        else
-          item.additional_data = Hash.new({ k => v })
-        end
+        next deserializer.call(JsonParseNode.new(v)) if deserializer
+
+        additional_data = item.respond_to?(:additional_data) ? item.additional_data : nil
+        next if additional_data.nil?
+
+        additional_data[k] = v
       end
     end
 
