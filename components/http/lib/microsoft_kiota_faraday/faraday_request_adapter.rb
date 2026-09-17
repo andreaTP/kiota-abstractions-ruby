@@ -3,10 +3,24 @@
 require 'microsoft_kiota_abstractions'
 require 'faraday'
 require 'net/http'
+require 'stringio'
 require_relative 'kiota_client_factory'
 require_relative 'middleware/response_handler_option'
 
 module MicrosoftKiotaFaraday
+  PRIMITIVE_READERS = {
+    'String' => :get_string_value,
+    'Float' => :get_float_value,
+    'Integer' => :get_number_value,
+    'Date' => :get_date_value,
+    'DateTime' => :get_date_time_value,
+    'Time' => :get_time_value,
+    'MicrosoftKiotaAbstractions::ISODuration' => :get_duration_value,
+    'UUIDTools::UUID' => :get_guid_value,
+    'boolean' => :get_boolean_value,
+    'Boolean' => :get_boolean_value
+  }.freeze
+
   class FaradayRequestAdapter
     include MicrosoftKiotaAbstractions::RequestAdapter
 
@@ -45,8 +59,54 @@ module MicrosoftKiotaFaraday
     end
 
     def send_async(request_info, factory, errors_mapping)
-      raise StandardError, 'request_info cannot be null' unless request_info
       raise StandardError, 'factory cannot be null' unless factory
+
+      execute_async(request_info, errors_mapping) do |response|
+        get_root_parse_node(response)&.get_object_value(factory)
+      end
+    end
+
+    def send_collection_async(request_info, factory, errors_mapping)
+      raise StandardError, 'factory cannot be null' unless factory
+
+      execute_async(request_info, errors_mapping) do |response|
+        get_root_parse_node(response)&.get_collection_of_object_values(factory)
+      end
+    end
+
+    def send_collection_of_primitive_async(request_info, type, errors_mapping)
+      execute_async(request_info, errors_mapping) do |response|
+        root_node = get_root_parse_node(response)
+        next root_node&.get_collection_of_enum_values(type) if type.is_a?(Hash)
+
+        root_node&.get_collection_of_primitive_values(type)
+      end
+    end
+
+    def send_primitive_async(request_info, type, errors_mapping)
+      execute_async(request_info, errors_mapping) do |response|
+        next binary_content(response) if type == StringIO
+        next get_root_parse_node(response)&.get_enum_value(type) if type.is_a?(Hash)
+
+        reader = PRIMITIVE_READERS[type.to_s]
+        raise StandardError, "unexpected primitive response type #{type}" if reader.nil?
+
+        get_root_parse_node(response)&.public_send(reader)
+      end
+    end
+
+    def send_no_response_content_async(request_info, errors_mapping)
+      execute_async(request_info, errors_mapping) { nil }
+    end
+
+    def binary_content(response)
+      return if response.body.nil? || response.body.empty?
+
+      StringIO.new(response.body)
+    end
+
+    def execute_async(request_info, errors_mapping)
+      raise StandardError, 'request_info cannot be null' unless request_info
 
       Fiber.new do
         set_base_url_for_request_information(request_info)
@@ -57,8 +117,7 @@ module MicrosoftKiotaFaraday
         response_handler = get_response_handler(request_info)
         response_handler&.call(response)&.resume
         throw_if_failed_reponse(response, errors_mapping)
-        root_node = get_root_parse_node(response)
-        root_node.get_object_value(factory)
+        yield response
       end
     end
 
@@ -72,9 +131,10 @@ module MicrosoftKiotaFaraday
     def get_root_parse_node(response)
       raise StandardError, 'response cannot be null' unless response
 
+      return if response.body.nil? || response.body.empty?
+
       response_content_type = get_response_content_type(response)
       raise StandardError, 'no response content type found for deserialization' unless response_content_type
-      return if response.body.nil? || response.body.empty?
 
       @parse_node_factory.get_parse_node(response_content_type, response.body)
     end

@@ -14,6 +14,10 @@ module MicrosoftKiotaAbstractions
       raise NotImplementedError
     end
 
+    def get_float_value
+      raise NotImplementedError
+    end
+
     def get_guid_value
       raise NotImplementedError
     end
@@ -34,7 +38,7 @@ module MicrosoftKiotaAbstractions
       raise NotImplementedError
     end
 
-    def get_collection_of_primitive_values
+    def get_collection_of_primitive_values(_type)
       raise NotImplementedError
     end
 
@@ -47,6 +51,10 @@ module MicrosoftKiotaAbstractions
     end
 
     def assign_field_values(_item)
+      raise NotImplementedError
+    end
+
+    def get_collection_of_enum_values(_type)
       raise NotImplementedError
     end
 
