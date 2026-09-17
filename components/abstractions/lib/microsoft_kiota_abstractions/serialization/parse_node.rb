@@ -50,6 +50,10 @@ module MicrosoftKiotaAbstractions
       raise NotImplementedError
     end
 
+    def get_collection_of_enum_values(_type)
+      raise NotImplementedError
+    end
+
     def get_enum_value(_type)
       raise NotImplementedError
     end

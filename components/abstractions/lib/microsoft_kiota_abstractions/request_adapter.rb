@@ -8,7 +8,21 @@ module MicrosoftKiotaAbstractions
       raise NotImplementedError
     end
 
-    # TODO: we're most likley missing something for enums and collections or at least at the implemenation level
+    def send_collection_async(_request_info, _factory, _errors_mapping)
+      raise NotImplementedError
+    end
+
+    def send_collection_of_primitive_async(_request_info, _type, _errors_mapping)
+      raise NotImplementedError
+    end
+
+    def send_primitive_async(_request_info, _type, _errors_mapping)
+      raise NotImplementedError
+    end
+
+    def send_no_response_content_async(_request_info, _errors_mapping)
+      raise NotImplementedError
+    end
 
     def get_serialization_writer_factory
       raise NotImplementedError
