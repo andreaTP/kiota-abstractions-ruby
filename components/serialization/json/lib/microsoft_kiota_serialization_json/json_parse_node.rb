@@ -124,16 +124,27 @@ module MicrosoftKiotaSerializationJson
       end
     end
 
-    def get_enum_values(_type)
+    def get_enum_values(type)
       raw_values = get_string_value
-      return [] if raw_values.nil?
+      return [] if raw_values.nil? || raw_values.empty?
 
-      raw_values.split(',').map(&:strip)
+      raw_values.split(',').map { |raw| resolve_enum_member(type, raw.strip) }
     end
 
     def get_enum_value(type)
-      items = get_enum_values(type).map(&:to_sym)
-      items[0] if items.length.positive?
+      get_enum_values(type).first
+    end
+
+    def get_collection_of_enum_values(type)
+      return get_enum_values(type) unless @current_node.is_a?(Array)
+
+      @current_node.map { |value| JsonParseNode.new(value).get_enum_value(type) }
+    end
+
+    def resolve_enum_member(type, raw)
+      return raw.to_sym unless type.is_a?(Hash)
+
+      type[raw.to_sym] || type[(raw[0].to_s.upcase + raw[1..].to_s).to_sym]
     end
 
     def get_child_node(name)
