@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0](https://github.com/microsoft/kiota-ruby/compare/v0.20.0...v0.21.0) (2026-09-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* leave unset scalars off the wire
+
+### Bug Fixes
+
+* deserialize composed type wrappers instead of raising ([4f65d60](https://github.com/microsoft/kiota-ruby/commit/4f65d60f84191c8bde288b09dcd5e0d130f80524))
+* deserialize composed type wrappers instead of raising ([ced3eb5](https://github.com/microsoft/kiota-ruby/commit/ced3eb5a43532eb5b23c83efd0faac934c732140))
+* leave unset scalars off the wire ([98ac7c8](https://github.com/microsoft/kiota-ruby/commit/98ac7c85819622afabad551132b3c987befa95d5))
+* match the error mapping by string status code ([ae8fdf1](https://github.com/microsoft/kiota-ruby/commit/ae8fdf133f699f1b1a42b25a9a04e78b44207279))
+* match the error mapping by string status code ([cd1bdc0](https://github.com/microsoft/kiota-ruby/commit/cd1bdc0bb0ac00a6de139d4fa36892c728e9950d))
+* remove misplaced magic comments ([8150e41](https://github.com/microsoft/kiota-ruby/commit/8150e418a6cb8c536fcfda20c5e7e72935810352))
+
 ## [0.20.0](https://github.com/microsoft/kiota-ruby/compare/v0.19.0...v0.20.0) (2026-08-27)
 
 
