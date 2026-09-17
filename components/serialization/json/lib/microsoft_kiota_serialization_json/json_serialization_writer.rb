@@ -33,6 +33,7 @@ module MicrosoftKiotaSerializationJson
     def write_string_value(key, value)
       raise StandardError, 'no key or value included in write_string_value(key, value)' if key.nil? && value.nil?
       return set_root_value(value) if key.nil?
+      return if value.nil?
 
       @writer[key] = value
     end
@@ -40,6 +41,7 @@ module MicrosoftKiotaSerializationJson
     def write_boolean_value(key, value)
       raise StandardError, 'no key or value included in write_boolean_value(key, value)' if key.nil? && value.nil?
       return set_root_value(value) if key.nil?
+      return if value.nil?
 
       @writer[key] = value
     end
@@ -47,6 +49,7 @@ module MicrosoftKiotaSerializationJson
     def write_number_value(key, value)
       raise StandardError, 'no key or value included in write_number_value(key, value)' if key.nil? && value.nil?
       return set_root_value(value) if key.nil?
+      return if value.nil?
 
       @writer[key] = value
     end
@@ -54,6 +57,7 @@ module MicrosoftKiotaSerializationJson
     def write_float_value(key, value)
       raise StandardError, 'no key or value included in write_float_value(key, value)' if key.nil? && value.nil?
       return set_root_value(value) if key.nil?
+      return if value.nil?
 
       @writer[key] = value
     end
@@ -61,36 +65,41 @@ module MicrosoftKiotaSerializationJson
     def write_guid_value(key, value)
       raise StandardError, 'no key or value included in write_guid_value(key, value)' if !key && !value
       return value.to_s unless key
+      return if value.nil?
 
-      @writer[key] = (value.to_s if value)
+      @writer[key] = value.to_s
     end
 
     def write_date_value(key, value)
       raise StandardError, 'no key or value included in write_date_value(key, value)' if !key && !value
       return value.strftime('%Y-%m-%d') unless key
+      return if value.nil?
 
-      @writer[key] = (value.strftime('%Y-%m-%d') if value)
+      @writer[key] = value.strftime('%Y-%m-%d')
     end
 
     def write_time_value(key, value)
       raise StandardError, 'no key or value included in write_time_value(key, value)' if !key && !value
       return value.strftime('%H:%M:%S%Z') unless key
+      return if value.nil?
 
-      @writer[key] = (value.strftime('%H:%M:%S%Z') if value)
+      @writer[key] = value.strftime('%H:%M:%S%Z')
     end
 
     def write_date_time_value(key, value)
       raise StandardError, 'no key or value included in write_date_time_value(key, value)' if !key && !value
       return value.strftime('%Y-%m-%dT%H:%M:%S%Z') unless key
+      return if value.nil?
 
-      @writer[key] = (value.strftime('%Y-%m-%dT%H:%M:%S%Z') if value)
+      @writer[key] = value.strftime('%Y-%m-%dT%H:%M:%S%Z')
     end
 
     def write_duration_value(key, value)
       raise StandardError, 'no key or value included in write_duration_value(key, value)' if !key && !value
       return value.string unless key
+      return if value.nil?
 
-      @writer[key] = (value.string if value)
+      @writer[key] = value.string
     end
 
     def write_collection_of_primitive_values(key, values)
@@ -124,6 +133,9 @@ module MicrosoftKiotaSerializationJson
     end
 
     def write_enum_value(key, values)
+      raise StandardError, 'no key or value included in write_enum_value(key, values)' if key.nil? && values.nil?
+      return if values.nil?
+
       write_string_value(key, values.to_s)
     end
 
