@@ -81,6 +81,34 @@ module MicrosoftKiotaAbstractions
       @headers.try_add(@@content_type_header, content_type)
     end
 
+    SCALAR_WRITERS = {
+      'String' => :write_string_value,
+      'Integer' => :write_number_value,
+      'Float' => :write_float_value,
+      'TrueClass' => :write_boolean_value,
+      'FalseClass' => :write_boolean_value,
+      'Date' => :write_date_value,
+      'DateTime' => :write_date_time_value,
+      'Time' => :write_time_value,
+      'MicrosoftKiotaAbstractions::ISODuration' => :write_duration_value,
+      'UUIDTools::UUID' => :write_guid_value,
+      'Symbol' => :write_enum_value
+    }.freeze
+
+    def set_content_from_scalar(request_adapter, content_type, values)
+      writer = request_adapter.get_serialization_writer_factory.get_serialization_writer(content_type)
+      @headers.try_add(@@content_type_header, content_type)
+      if values.is_a?(Array)
+        writer.write_collection_of_primitive_values(nil, values)
+      else
+        method = SCALAR_WRITERS[values.class.to_s]
+        raise StandardError, "unknown type during serialization: #{values.class}" if method.nil?
+
+        writer.public_send(method, nil, values)
+      end
+      @content = writer.get_serialized_content
+    end
+
     def set_content_from_parsable(request_adapter, content_type, values)
       writer = request_adapter.get_serialization_writer_factory.get_serialization_writer(content_type)
       @headers.try_add(@@content_type_header, content_type)

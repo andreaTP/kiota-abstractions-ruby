@@ -64,7 +64,7 @@ module MicrosoftKiotaSerializationJson
 
     def write_guid_value(key, value)
       raise StandardError, 'no key or value included in write_guid_value(key, value)' if !key && !value
-      return value.to_s unless key
+      return set_root_value(value.to_s) unless key
       return if value.nil?
 
       @writer[key] = value.to_s
@@ -72,7 +72,7 @@ module MicrosoftKiotaSerializationJson
 
     def write_date_value(key, value)
       raise StandardError, 'no key or value included in write_date_value(key, value)' if !key && !value
-      return value.strftime('%Y-%m-%d') unless key
+      return set_root_value(value.strftime('%Y-%m-%d')) unless key
       return if value.nil?
 
       @writer[key] = value.strftime('%Y-%m-%d')
@@ -80,7 +80,7 @@ module MicrosoftKiotaSerializationJson
 
     def write_time_value(key, value)
       raise StandardError, 'no key or value included in write_time_value(key, value)' if !key && !value
-      return value.strftime('%H:%M:%S%Z') unless key
+      return set_root_value(value.strftime('%H:%M:%S%Z')) unless key
       return if value.nil?
 
       @writer[key] = value.strftime('%H:%M:%S%Z')
@@ -88,7 +88,7 @@ module MicrosoftKiotaSerializationJson
 
     def write_date_time_value(key, value)
       raise StandardError, 'no key or value included in write_date_time_value(key, value)' if !key && !value
-      return value.strftime('%Y-%m-%dT%H:%M:%S%Z') unless key
+      return set_root_value(value.strftime('%Y-%m-%dT%H:%M:%S%Z')) unless key
       return if value.nil?
 
       @writer[key] = value.strftime('%Y-%m-%dT%H:%M:%S%Z')
@@ -96,7 +96,7 @@ module MicrosoftKiotaSerializationJson
 
     def write_duration_value(key, value)
       raise StandardError, 'no key or value included in write_duration_value(key, value)' if !key && !value
-      return value.string unless key
+      return set_root_value(value.string) unless key
       return if value.nil?
 
       @writer[key] = value.string
@@ -104,11 +104,8 @@ module MicrosoftKiotaSerializationJson
 
     def write_collection_of_primitive_values(key, values)
       return unless values
-      unless key
-        return values.map do |v|
-          write_any_value(nil, v)
-        end
-      end
+      return set_root_value(values.map { |v| serialized_scalar(v) }) unless key
+
       @writer[key] = values.map do |v|
         write_any_value(key, v)
       end
@@ -130,6 +127,15 @@ module MicrosoftKiotaSerializationJson
       else
         values.each { |v| v.serialize(self) }
       end
+    end
+
+    def write_collection_of_enum_values(key, values)
+      return unless values
+
+      serialized = values.compact.map(&:to_s)
+      return set_root_value(serialized) unless key
+
+      @writer[key] = serialized
     end
 
     def write_enum_value(key, values)
@@ -161,6 +167,14 @@ module MicrosoftKiotaSerializationJson
     end
 
     public
+
+    def serialized_scalar(value)
+      return value if value.nil? || value == true || value == false
+
+      temp = JsonSerializationWriter.new
+      result = temp.write_any_value(nil, value)
+      temp.root_value? ? temp.root_value : result
+    end
 
     def write_any_value(key, value)
       if value

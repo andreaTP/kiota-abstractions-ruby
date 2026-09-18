@@ -50,6 +50,10 @@ module MicrosoftKiotaAbstractions
       raise NotImplementedError
     end
 
+    def write_collection_of_enum_values(_key, _values)
+      raise NotImplementedError
+    end
+
     def write_enum_value(_key, _value)
       raise NotImplementedError
     end
