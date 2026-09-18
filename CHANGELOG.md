@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0](https://github.com/microsoft/kiota-ruby/compare/v0.21.0...v0.22.0) (2026-09-18)
+
+
+### Features
+
+* add the collection, primitive and no-content send methods ([85ee08b](https://github.com/microsoft/kiota-ruby/commit/85ee08b747c437f272a331c14567e8b98657cf7a))
+* add the collection, primitive and no-content send methods ([592e28d](https://github.com/microsoft/kiota-ruby/commit/592e28dd9a7aa6d8dd809314b8b20a1855a0a683))
+* serialize scalar request bodies and enum collections ([57a4158](https://github.com/microsoft/kiota-ruby/commit/57a4158aea0eb7cc0bc3d97ddbcbf487953fb104))
+* serialize scalar request bodies and enum collections ([37ec574](https://github.com/microsoft/kiota-ruby/commit/37ec5746507ec37633d4e34d42a1eba9f985ffd2))
+
 ## [0.21.0](https://github.com/microsoft/kiota-ruby/compare/v0.20.0...v0.21.0) (2026-09-17)
 
 
