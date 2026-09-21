@@ -51,6 +51,8 @@ RSpec.describe MicrosoftKiotaFaraday::FaradayRequestAdapter do
     end
 
     it 'builds a native QUERY request' do
+      expect(adapter.client).to receive(:build_request).with(:query).and_call_original
+
       expect(adapter.get_request_from_request_info(request_info).http_method).to eq(:query)
     end
   end
