@@ -49,6 +49,8 @@ chore: update dependencies
 
 When a PR is squash-merged, the PR title becomes the commit message on `main`. Make sure the **PR title** follows the conventional commit format so release-please can categorize it correctly.
 
+Do not update `CHANGELOG.md` in pull requests. The changelog is generated automatically by release-please from conventional commit messages.
+
 ## Development Setup
 
 1. Clone the repository
