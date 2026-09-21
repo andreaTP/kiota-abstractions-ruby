@@ -42,6 +42,21 @@ RSpec.describe MicrosoftKiotaFaraday::FaradayRequestAdapter do
     end
   end
 
+  describe '#get_request_from_request_info' do
+    let(:request_info) do
+      MicrosoftKiotaAbstractions::RequestInformation.new.tap do |info|
+        info.http_method = :QUERY
+        info.uri = 'https://example.com/items'
+      end
+    end
+
+    it 'builds a native QUERY request' do
+      expect(adapter.client).to receive(:build_request).with(:query).and_call_original
+
+      expect(adapter.get_request_from_request_info(request_info).http_method).to eq(:query)
+    end
+  end
+
   describe '#get_root_parse_node' do
     context 'when response is null' do
       it 'raises an error' do

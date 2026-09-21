@@ -162,24 +162,8 @@ module MicrosoftKiotaFaraday
     def get_request_from_request_info(request_info)
       set_base_url_for_request_information(request_info)
       case request_info.http_method
-      when :GET
-        request = @client.build_request(:get)
-      when :POST
-        request = @client.build_request(:post)
-      when :PATCH
-        request = @client.build_request(:patch)
-      when :DELETE
-        request = @client.build_request(:delete)
-      when :OPTIONS
-        request = @client.build_request(:options)
-      when :CONNECT
-        request = @client.build_request(:connect)
-      when :PUT
-        request = @client.build_request(:put)
-      when :TRACE
-        request = @client.build_request(:trace)
-      when :HEAD
-        request = @client.build_request(:head)
+      when :GET, :POST, :PATCH, :DELETE, :OPTIONS, :CONNECT, :PUT, :TRACE, :HEAD, :QUERY
+        request = @client.build_request(request_info.http_method.downcase)
       else
         raise StandardError, 'unsupported http method'
       end
