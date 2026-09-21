@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0](https://github.com/microsoft/kiota-ruby/compare/v0.22.0...v0.23.0) (2026-09-21)
+
+
+### Features
+
+* add support for the HTTP QUERY verb (RFC 10008) ([8329229](https://github.com/microsoft/kiota-ruby/commit/8329229c330cff8d341c9cbf1560bbf3620513f3))
+* Add support for the HTTP QUERY verb (RFC 10008) ([e5f5288](https://github.com/microsoft/kiota-ruby/commit/e5f5288ee31d1555ee3a4baea230a2d253c8408f))
+
 ## [0.22.0](https://github.com/microsoft/kiota-ruby/compare/v0.21.0...v0.22.0) (2026-09-18)
 
 
