@@ -4,6 +4,10 @@
 
 This repository contains the Ruby libraries for [Kiota](https://github.com/microsoft/kiota)-generated API clients.
 
+## Requirements
+
+Ruby 3.3 or newer is required.
+
 ## Components
 
 | Gem | Description | RubyGems |
@@ -25,6 +29,8 @@ gem 'microsoft_kiota_authentication_oauth'
 ```
 
 ## Development
+
+Install Ruby 3.3 or newer, then run:
 
 ```shell
 git clone https://github.com/microsoft/kiota-ruby.git
