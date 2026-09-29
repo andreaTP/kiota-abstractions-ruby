@@ -40,7 +40,7 @@ Every commit merged to `main` **must** follow this format:
 ```
 fix: correct content not being set in request information
 feat: add try_add method for request headers
-feat!: bump minimum required ruby version to 3.0
+feat!: require ruby 3.3 or newer
 docs: update README installation instructions
 chore: update dependencies
 ```
@@ -54,5 +54,6 @@ Do not update `CHANGELOG.md` in pull requests. The changelog is generated automa
 ## Development Setup
 
 1. Clone the repository
-2. Run `bundle install` to install dependencies
-3. Run `bundle exec rake` to run linting and tests
+2. Install Ruby 3.3 or newer
+3. Run `bundle install` to install dependencies
+4. Run `bundle exec rake` to run linting and tests
