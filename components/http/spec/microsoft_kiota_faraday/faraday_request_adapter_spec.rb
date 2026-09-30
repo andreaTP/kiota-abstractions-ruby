@@ -40,6 +40,28 @@ RSpec.describe MicrosoftKiotaFaraday::FaradayRequestAdapter do
       ok = instance_double(Faraday::Response, status: 200, body:, headers:)
       expect { adapter.throw_if_failed_reponse(ok, {}) }.not_to raise_error
     end
+
+    it 'gives the deserialized error the response status code and headers' do
+      expect { adapter.throw_if_failed_reponse(response, { '400' => factory }) }.to raise_error(error) do |raised|
+        expect(raised.response_status_code).to eq(400)
+        expect(raised.response_headers).to eq(headers)
+      end
+    end
+
+    it 'gives the generic error the response status code and headers' do
+      expect { adapter.throw_if_failed_reponse(response, {}) }.to raise_error(MicrosoftKiotaAbstractions::ApiError) do |raised|
+        expect(raised.response_status_code).to eq(400)
+        expect(raised.response_headers).to eq(headers)
+      end
+    end
+
+    it 'gives the error raised for an empty body the response status code and headers' do
+      empty = instance_double(Faraday::Response, status: 503, body: '', headers:)
+      expect { adapter.throw_if_failed_reponse(empty, { '5XX' => factory }) }.to raise_error(MicrosoftKiotaAbstractions::ApiError) do |raised|
+        expect(raised.response_status_code).to eq(503)
+        expect(raised.response_headers).to eq(headers)
+      end
+    end
   end
 
   describe '#get_request_from_request_info' do

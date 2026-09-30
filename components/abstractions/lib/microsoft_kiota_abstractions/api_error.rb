@@ -5,6 +5,9 @@ module MicrosoftKiotaAbstractions
   class ApiError < StandardError
     include MicrosoftKiotaAbstractions::Parsable
 
+    # the status code and headers of the response the error was raised for
+    attr_accessor :response_status_code, :response_headers
+
     ##
     ## The deserialization information for the current model
     ## @return a i_dictionary
