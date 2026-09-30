@@ -60,14 +60,15 @@ RSpec.describe MicrosoftKiotaAbstractions::ParseNodeHelper do
       expect(result).to eq({ 'name' => :name_handler, 'email' => :email_handler })
     end
 
-    it 'later targets override earlier targets on key conflict' do
+    it 'feeds a field that several targets declare to each of them' do
+      calls = []
       target1 = double('Parsable1')
       target2 = double('Parsable2')
-      allow(target1).to receive(:get_field_deserializers).and_return({ 'name' => :handler_v1 })
-      allow(target2).to receive(:get_field_deserializers).and_return({ 'name' => :handler_v2 })
+      allow(target1).to receive(:get_field_deserializers).and_return({ 'name' => ->(n) { calls << [:first, n] } })
+      allow(target2).to receive(:get_field_deserializers).and_return({ 'name' => ->(n) { calls << [:second, n] } })
 
-      result = described_class.merge_deserializers_for_intersection_wrapper(target1, target2)
-      expect(result).to eq({ 'name' => :handler_v2 })
+      described_class.merge_deserializers_for_intersection_wrapper(target1, target2)['name'].call(:node)
+      expect(calls).to eq([%i[first node], %i[second node]])
     end
 
     it 'skips nil targets mixed with valid targets' do
