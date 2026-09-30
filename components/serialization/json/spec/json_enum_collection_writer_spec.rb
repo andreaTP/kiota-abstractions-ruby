@@ -20,6 +20,12 @@ RSpec.describe 'writing enum collections' do
     writer.write_collection_of_enum_values('colours', [:Red, nil])
     expect(writer.writer).to eq({ 'colours' => %w[Red] })
   end
+
+  it 'writes member values as they are on the wire' do
+    writer.write_collection_of_enum_values('actions', %w[read read-all])
+    writer.write_enum_value('type', 'incoming-payment')
+    expect(writer.writer).to eq({ 'actions' => %w[read read-all], 'type' => 'incoming-payment' })
+  end
 end
 
 RSpec.describe 'writing a primitive collection as the document root' do

@@ -144,6 +144,7 @@ module MicrosoftKiotaSerializationJson
     def resolve_enum_member(type, raw)
       return raw.to_sym unless type.is_a?(Hash)
 
+      type.each_value { |value| return value if value.to_s == raw }
       type[raw.to_sym] || type[(raw[0].to_s.upcase + raw[1..].to_s).to_sym]
     end
 
