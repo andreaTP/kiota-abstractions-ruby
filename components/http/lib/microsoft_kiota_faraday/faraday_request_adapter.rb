@@ -149,15 +149,20 @@ module MicrosoftKiotaFaraday
         error_factory = errors_mapping['XXX']
       end
       if error_factory.nil?
-        raise with_response(MicrosoftKiotaAbstractions::ApiError.new(
-                              "The server returned an unexpected status code and no error factory is registered for this code:#{status_code}"
-                            ), response)
+        raise MicrosoftKiotaAbstractions::ApiError.new(
+          "The server returned an unexpected status code and no error factory is registered for this code:#{status_code}",
+          response_status_code: status_code, response_headers: response.headers
+        )
       end
 
       root_node = get_root_parse_node(response)
       error = root_node.get_object_value(error_factory) unless root_node.nil?
-      error ||= MicrosoftKiotaAbstractions::ApiError.new("The server returned an unexpected status code:#{status_code}")
-      raise with_response(error, response)
+      if error.nil?
+        raise MicrosoftKiotaAbstractions::ApiError.new("The server returned an unexpected status code:#{status_code}",
+                                                       response_status_code: status_code, response_headers: response.headers)
+      end
+
+      raise add_response_details(error, response)
     end
 
     def get_request_from_request_info(request_info)
@@ -214,11 +219,12 @@ module MicrosoftKiotaFaraday
       request_info.path_parameters['baseurl'] = @base_url
     end
 
-    def with_response(error, response)
-      if error.is_a?(MicrosoftKiotaAbstractions::ApiError)
-        error.response_status_code = response.status
-        error.response_headers = response.headers
-      end
+    # an error the factory built learns the response details only once it is deserialized
+    def add_response_details(error, response)
+      return error unless error.is_a?(MicrosoftKiotaAbstractions::ApiError)
+
+      error.response_status_code = response.status
+      error.response_headers = response.headers
       error
     end
   end
