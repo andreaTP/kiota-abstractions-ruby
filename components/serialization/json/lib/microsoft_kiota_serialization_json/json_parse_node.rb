@@ -36,23 +36,23 @@ module MicrosoftKiotaSerializationJson
     end
 
     def get_guid_value
-      UUIDTools::UUID.parse(@current_node)
+      UUIDTools::UUID.parse(@current_node) if @current_node.is_a?(String)
     end
 
     def get_date_value
-      Date.parse(@current_node)
+      Date.parse(@current_node) if @current_node.is_a?(String)
     end
 
     def get_time_value
-      Time.parse(@current_node)
+      Time.parse(@current_node) if @current_node.is_a?(String)
     end
 
     def get_date_time_value
-      DateTime.parse(@current_node)
+      DateTime.parse(@current_node) if @current_node.is_a?(String)
     end
 
     def get_duration_value
-      MicrosoftKiotaAbstractions::ISODuration.new(@current_node)
+      MicrosoftKiotaAbstractions::ISODuration.new(@current_node) if @current_node.is_a?(String)
     end
 
     # The generator passes the type as a class, except for booleans which it passes as a plain
@@ -73,6 +73,8 @@ module MicrosoftKiotaSerializationJson
     }.freeze
 
     def get_collection_of_primitive_values(type)
+      return unless @current_node.is_a?(Array)
+
       reader = PRIMITIVE_READERS[type]
       @current_node.map do |object|
         next if object.nil?
@@ -88,6 +90,7 @@ module MicrosoftKiotaSerializationJson
 
     def get_collection_of_object_values(factory)
       raise StandardError, 'Factory cannot be null' if factory.nil?
+      return unless @current_node.is_a?(Array)
 
       @current_node.map do |object|
         next if object.nil?
@@ -136,7 +139,8 @@ module MicrosoftKiotaSerializationJson
     end
 
     def get_collection_of_enum_values(type)
-      return get_enum_values(type) unless @current_node.is_a?(Array)
+      return get_enum_values(type) if @current_node.is_a?(String)
+      return unless @current_node.is_a?(Array)
 
       @current_node.map { |value| JsonParseNode.new(value).get_enum_value(type) }
     end
@@ -144,11 +148,14 @@ module MicrosoftKiotaSerializationJson
     def resolve_enum_member(type, raw)
       return raw.to_sym unless type.is_a?(Hash)
 
+      type.each_value { |value| return value if value.to_s == raw }
       type[raw.to_sym] || type[(raw[0].to_s.upcase + raw[1..].to_s).to_sym]
     end
 
     def get_child_node(name)
       raise StandardError, 'Name cannot be null' if name.nil? || name.empty?
+
+      return unless @current_node.is_a?(Hash)
 
       raw_value = @current_node[name]
       JsonParseNode.new(raw_value) if raw_value
