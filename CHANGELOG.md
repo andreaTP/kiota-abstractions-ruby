@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.0](https://github.com/microsoft/kiota-ruby/compare/v0.23.0...v0.24.0) (2026-10-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* require ruby 3.3 or newer
+
+### Features
+
+* expose the response status code and headers on ApiError ([18c7266](https://github.com/microsoft/kiota-ruby/commit/18c726617f571229996170ee2da4cc231927734c))
+* require ruby 3.3 or newer ([7e2f97e](https://github.com/microsoft/kiota-ruby/commit/7e2f97ea59f6c4e1576608e82ca9cf44fa10ac34))
+
+
+### Bug Fixes
+
+* answer nil from a reader given a node of another shape ([978b5df](https://github.com/microsoft/kiota-ruby/commit/978b5dfc3ae3a476af5bf5d6ecb62044a5cfe8af))
+* enum and composed type reading, expose error status and headers ([34d92ab](https://github.com/microsoft/kiota-ruby/commit/34d92ab4607c4585f1efada53d2ccbf489028291))
+* feed a field that several intersection members declare to each of them ([f188ad2](https://github.com/microsoft/kiota-ruby/commit/f188ad209f959d47a9cf16103fbc01c391ce08da))
+* read an enum member by the value that goes on the wire ([05aa7f4](https://github.com/microsoft/kiota-ruby/commit/05aa7f456699916a02289123d6653feb99c1a280))
+* send a request body that was set from a stream ([74157a4](https://github.com/microsoft/kiota-ruby/commit/74157a494e51e8200223e53b399ed3029b82417d))
+* send a request body that was set from a stream ([3dab001](https://github.com/microsoft/kiota-ruby/commit/3dab00157764d74370c3787284b1095730a8f45f))
+
 ## [0.23.0](https://github.com/microsoft/kiota-ruby/compare/v0.22.0...v0.23.0) (2026-09-21)
 
 
