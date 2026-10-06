@@ -36,6 +36,18 @@ RSpec.describe MicrosoftKiotaFaraday::FaradayRequestAdapter do
     allow(parse_node_factory).to receive(:get_parse_node).and_return(parse_node)
   end
 
+  describe 'a redirect without a location header' do
+    it 'returns nil for a 304' do
+      respond_with('', status: 304, response_headers: {})
+      expect(adapter.send_async(request_info, factory, nil).resume).to be_nil
+    end
+
+    it 'returns nil for a 302' do
+      respond_with('', status: 302, response_headers: {})
+      expect(adapter.send_async(request_info, factory, nil).resume).to be_nil
+    end
+  end
+
   describe '#send_no_response_content_async' do
     it 'returns without parsing a body' do
       respond_with('', status: 204, response_headers: {})

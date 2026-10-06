@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'date'
+require 'time'
 require 'uri'
 require 'stduritemplate'
 require_relative 'http_method'
@@ -32,7 +34,8 @@ module MicrosoftKiotaAbstractions
       return @uri unless @uri.nil?
 
       if path_parameters[@@raw_url_key].nil?
-        return URI(StdUriTemplate.expand(@url_template, path_parameters.merge(query_parameters)))
+        values = path_parameters.merge(query_parameters).transform_values { |v| template_value(v) }
+        return URI(StdUriTemplate.expand(@url_template, values))
       end
 
       self.uri = path_parameters[@@raw_url_key]
@@ -142,6 +145,20 @@ module MicrosoftKiotaAbstractions
         end
         value = eval("q.#{method_name}")
         query_parameters[key] = value unless value.nil?
+      end
+    end
+
+    private
+
+    # the template engine only takes strings, numbers, booleans and lists of them
+    def template_value(value)
+      case value
+      when nil, String, Integer, Float, true, false then value
+      when Array then value.map { |v| template_value(v) }
+      when Hash then value.transform_values { |v| template_value(v) }
+      when Date, Time then value.iso8601
+      when MicrosoftKiotaAbstractions::ISODuration then value.string
+      else value.to_s
       end
     end
   end

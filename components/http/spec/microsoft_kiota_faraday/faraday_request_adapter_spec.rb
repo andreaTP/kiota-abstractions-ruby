@@ -36,6 +36,20 @@ RSpec.describe MicrosoftKiotaFaraday::FaradayRequestAdapter do
         .to raise_error(MicrosoftKiotaAbstractions::ApiError, /no error factory is registered/)
     end
 
+    it 'picks the 5XX factory, not the 4XX one, for a 500' do
+      server_error = MicrosoftKiotaAbstractions::ApiError.new('server')
+      allow(parse_node).to receive(:get_object_value).and_return(server_error)
+      failed = instance_double(Faraday::Response, status: 500, body:, headers:)
+      expect { adapter.throw_if_failed_reponse(failed, { '4XX' => factory, '5XX' => ->(_pn) { server_error } }) }
+        .to raise_error(server_error)
+    end
+
+    it 'does not use a 4XX factory for a 500' do
+      failed = instance_double(Faraday::Response, status: 500, body:, headers:)
+      expect { adapter.throw_if_failed_reponse(failed, { '4XX' => factory }) }
+        .to raise_error(MicrosoftKiotaAbstractions::ApiError, /no error factory is registered/)
+    end
+
     it 'returns without raising for a successful response' do
       ok = instance_double(Faraday::Response, status: 200, body:, headers:)
       expect { adapter.throw_if_failed_reponse(ok, {}) }.not_to raise_error

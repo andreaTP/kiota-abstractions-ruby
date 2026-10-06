@@ -113,7 +113,7 @@ module MicrosoftKiotaSerializationJson
 
     def write_collection_of_object_values(key, values)
       return unless values
-      return values.map { |v| write_object_value(nil, v) } unless key
+      return set_root_value(values.map { |v| object_value_hash(v) }) unless key
 
       @writer[key] = values.map { |v| object_value_hash(v) }
     end
