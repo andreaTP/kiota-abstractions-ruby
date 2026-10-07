@@ -51,4 +51,17 @@ RSpec.describe MicrosoftKiotaAbstractions::AllowedHostsValidator do
     expect { described_class.new(['https://example.com']) }.to raise_error(ArgumentError, /host/)
     expect { described_class.new([]).allowed_hosts = ['http://example.com'] }.to raise_error(ArgumentError, /host/)
   end
+
+  it 'keeps the previous hosts when an update is rejected' do
+    validator = described_class.new(['example.com'])
+    expect { validator.allowed_hosts = ['other.com', 'https://bad.com'] }.to raise_error(ArgumentError)
+    expect(validator.url_host_valid?('https://example.com')).to be(true)
+    expect(validator.url_host_valid?('https://other.com')).to be(false)
+  end
+
+  it 'does not fall back to allowing every host when an update is rejected' do
+    validator = described_class.new(['example.com'])
+    expect { validator.allowed_hosts = ['https://bad.com'] }.to raise_error(ArgumentError)
+    expect(validator.url_host_valid?('https://anything.com')).to be(false)
+  end
 end

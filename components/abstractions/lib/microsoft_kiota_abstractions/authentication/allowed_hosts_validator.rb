@@ -13,12 +13,13 @@ module MicrosoftKiotaAbstractions
 
     # sets the list of valid hosts with provided value (val)
     def allowed_hosts=(val)
-      @allowed_hosts = {}
+      hosts = {}
       val.each do |host|
         raise ArgumentError, "host should not contain http or https prefix: #{host}" if host.match?(%r{\Ahttps?://}i)
 
-        @allowed_hosts[host.downcase] = true
+        hosts[host.downcase] = true
       end
+      @allowed_hosts = hosts
     end
 
     # checks whether the provided host is valid
