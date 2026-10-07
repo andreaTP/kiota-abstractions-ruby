@@ -8,14 +8,18 @@ module MicrosoftKiotaAbstractions
   class AllowedHostsValidator
     # creates a new AllocatedHostsValidator with provided values
     def initialize(allowed_hosts)
-      @allowed_hosts = {}
-      allowed_hosts.each { |host| @allowed_hosts[host.downcase] = true }
+      self.allowed_hosts = allowed_hosts
     end
 
     # sets the list of valid hosts with provided value (val)
     def allowed_hosts=(val)
-      @allowed_hosts = {}
-      val.each { |host| @allowed_hosts[host.downcase] = true }
+      hosts = {}
+      val.each do |host|
+        raise ArgumentError, "host should not contain http or https prefix: #{host}" if host.match?(%r{\Ahttps?://}i)
+
+        hosts[host.downcase] = true
+      end
+      @allowed_hosts = hosts
     end
 
     # checks whether the provided host is valid

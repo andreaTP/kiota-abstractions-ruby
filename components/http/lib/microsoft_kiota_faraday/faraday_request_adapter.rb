@@ -141,11 +141,11 @@ module MicrosoftKiotaFaraday
       return if status_code < 400
 
       error_factory = errors_mapping[status_code.to_s] unless errors_mapping.nil?
-      error_factory = errors_mapping['4XX'] unless !error_factory.nil? || errors_mapping.nil? || status_code > 500
-      unless !error_factory.nil? || errors_mapping.nil? || status_code < 500 || status_code > 600
+      error_factory = errors_mapping['4XX'] unless !error_factory.nil? || errors_mapping.nil? || status_code >= 500
+      unless !error_factory.nil? || errors_mapping.nil? || status_code < 500 || status_code >= 600
         error_factory = errors_mapping['5XX']
       end
-      unless !error_factory.nil? || errors_mapping.nil? || status_code < 400 || status_code > 600
+      unless !error_factory.nil? || errors_mapping.nil? || status_code < 400 || status_code >= 600
         error_factory = errors_mapping['XXX']
       end
       if error_factory.nil?

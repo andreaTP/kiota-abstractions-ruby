@@ -28,12 +28,25 @@ RSpec.describe 'writing enum collections' do
   end
 end
 
-RSpec.describe 'writing a primitive collection as the document root' do
+class ReaderShapeLikeItem
+  include MicrosoftKiotaAbstractions::Parsable
+
+  def initialize(name) = @name = name
+  def serialize(writer) = writer.write_string_value('name', @name)
+end
+
+RSpec.describe 'writing a collection as the document root' do
   let(:writer) { MicrosoftKiotaSerializationJson::JsonSerializationWriter.new }
 
   it 'writes every element, not just the last' do
     writer.write_collection_of_primitive_values(nil, %w[a b])
     expect(JSON.parse(writer.get_serialized_content)).to eq(%w[a b])
+  end
+
+  it 'writes every object of a collection, not just the last' do
+    items = %w[one two].map { |name| ReaderShapeLikeItem.new(name) }
+    writer.write_collection_of_object_values(nil, items)
+    expect(JSON.parse(writer.get_serialized_content)).to eq([{ 'name' => 'one' }, { 'name' => 'two' }])
   end
 
   it 'converts elements that need it' do

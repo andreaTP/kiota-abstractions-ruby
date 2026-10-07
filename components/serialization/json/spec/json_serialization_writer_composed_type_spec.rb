@@ -233,14 +233,14 @@ RSpec.describe MicrosoftKiotaSerializationJson::JsonSerializationWriter do
                                             ])
     end
 
-    it 'serializes into self when key is nil' do
+    it 'writes a JSON array as the document when key is nil' do
       writer = MicrosoftKiotaSerializationJson::JsonSerializationWriter.new
       obj1 = TestModels::SimpleParsable.new
       obj1.name = 'Alice'
       obj1.age = 30
 
       writer.write_collection_of_object_values(nil, [obj1])
-      expect(writer.writer).to eq({ 'name' => 'Alice', 'age' => 30 })
+      expect(JSON.parse(writer.get_serialized_content)).to eq([{ 'name' => 'Alice', 'age' => 30 }])
     end
 
     it 'does not contaminate the parent writer' do
