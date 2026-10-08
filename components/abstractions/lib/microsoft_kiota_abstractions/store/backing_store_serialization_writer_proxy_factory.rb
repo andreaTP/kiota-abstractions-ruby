@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'English'
+require 'delegate'
 require_relative '../serialization/serialization_writer_proxy_factory'
 require_relative 'backed_model'
 
@@ -13,10 +14,26 @@ module MicrosoftKiotaAbstractions
 
     def get_serialization_writer(content_type)
       session = Session.new
-      wrap(@concrete.get_serialization_writer(content_type), session.method(:before), session.method(:after), session.method(:start))
+      writer = wrap(@concrete.get_serialization_writer(content_type),
+                    session.method(:before), session.method(:after), session.method(:start))
+      DocumentWriter.new(writer, session)
     end
 
-    # one per writer: the written models become clean only once the whole document was written
+    # the document is complete once its content is produced: only then do the written models become clean
+    class DocumentWriter < SimpleDelegator
+      def initialize(writer, session)
+        super(writer)
+        @session = session
+      end
+
+      def get_serialized_content
+        content = __getobj__.get_serialized_content
+        @session.finish
+        content
+      end
+    end
+
+    # one per writer: tracks the models written into the document
     class Session
       def initialize
         @depth = 0
@@ -45,17 +62,10 @@ module MicrosoftKiotaAbstractions
         @depth -= 1
         @failed ||= !$ERROR_INFO.nil? && !$ERROR_INFO.equal?(@outer_error)
         store = store_of(value)
-        if store
-          store.return_only_changed_values = @filtering.delete(store) if @filtering.key?(store)
-          @written[store] = true
-        end
-        finish if @depth.zero?
-      end
+        return unless store
 
-      private
-
-      def store_of(value)
-        value.backing_store if value.is_a?(BackedModel)
+        store.return_only_changed_values = @filtering.delete(store) if @filtering.key?(store)
+        @written[store] = true
       end
 
       def finish
@@ -63,6 +73,13 @@ module MicrosoftKiotaAbstractions
         @written.clear
         @failed = false
       end
+
+      private
+
+      def store_of(value)
+        value.backing_store if value.is_a?(BackedModel)
+      end
     end
+    private_constant :DocumentWriter, :Session
   end
 end

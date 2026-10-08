@@ -92,6 +92,13 @@ RSpec.describe MicrosoftKiotaAbstractions::ApiClientBuilder do
       .to be_a(ProxyFactoryFakes::ParseFactory)
   end
 
+  it 'does not wrap a factory twice' do
+    once = described_class.enable_backing_store_for_serialization_writer_factory(ProxyFactoryFakes::WriterFactory.new('text/plain'))
+    expect(described_class.enable_backing_store_for_serialization_writer_factory(once)).to be(once)
+    parse_once = described_class.enable_backing_store_for_parse_node_factory(ProxyFactoryFakes::ParseFactory.new('text/plain'))
+    expect(described_class.enable_backing_store_for_parse_node_factory(parse_once)).to be(parse_once)
+  end
+
   it 'wraps a factory that is not a registry' do
     result = described_class.enable_backing_store_for_serialization_writer_factory(ProxyFactoryFakes::WriterFactory.new('text/plain'))
     expect(result).to be_a(MicrosoftKiotaAbstractions::BackingStoreSerializationWriterProxyFactory)

@@ -101,6 +101,34 @@ RSpec.describe 'a model with a backing store' do
     expect(write(user)).to eq({})
   end
 
+  def write_list(models, factory = writers)
+    writer = factory.get_serialization_writer('application/json')
+    writer.write_collection_of_object_values(nil, models)
+    JSON.parse(writer.get_serialized_content)
+  end
+
+  it 'writes the changes of a model each time it appears in a list body' do
+    user.name = 'Bea'
+    expect(write_list([user, user])).to eq([{ 'name' => 'Bea' }, { 'name' => 'Bea' }])
+  end
+
+  it 'keeps the changes of every model in a list body when a later one fails' do
+    user.name = 'Bea'
+    other = read('{"id":"u2","name":"Cy"}')
+    other.define_singleton_method(:serialize) { |_writer| raise 'broken' }
+    expect { write_list([user, other]) }.to raise_error(RuntimeError, 'broken')
+    expect(write(user)).to eq({ 'name' => 'Bea' })
+  end
+
+  it 'reads every value again after writing through backing store proxies stacked twice' do
+    stacked = MicrosoftKiotaAbstractions::BackingStoreSerializationWriterProxyFactory.new(writers)
+    user.name = 'Bea'
+    writer = stacked.get_serialization_writer('application/json')
+    writer.write_object_value(nil, user)
+    expect(JSON.parse(writer.get_serialized_content)).to eq({ 'name' => 'Bea' })
+    expect(user.phone).to eq('123')
+  end
+
   it 'writes every value set on a new model' do
     fresh = BackedJsonModels::User.new
     fresh.id = 'n1'

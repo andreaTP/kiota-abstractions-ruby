@@ -27,9 +27,11 @@ module MicrosoftKiotaAbstractions
         @on_before&.call(value)
         original_before&.call(value)
       end
+      # after callbacks unwind the before ones, and run even when an inner one raised
       node.on_after_assign_field_values = lambda do |value|
-        @on_after&.call(value)
         original_after&.call(value)
+      ensure
+        @on_after&.call(value)
       end
       node
     end

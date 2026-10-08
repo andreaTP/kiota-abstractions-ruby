@@ -20,7 +20,7 @@ module MicrosoftKiotaAbstractions
       result = original
       if original.is_a?(SerializationWriterFactoryRegistry)
         enable_backing_store_for_registry(original, BackingStoreSerializationWriterProxyFactory)
-      else
+      elsif !original.is_a?(BackingStoreSerializationWriterProxyFactory)
         result = BackingStoreSerializationWriterProxyFactory.new(original)
       end
       enable_backing_store_for_registry(SerializationWriterFactoryRegistry.default_instance,
@@ -33,7 +33,7 @@ module MicrosoftKiotaAbstractions
       result = original
       if original.is_a?(ParseNodeFactoryRegistry)
         enable_backing_store_for_registry(original, BackingStoreParseNodeFactory)
-      else
+      elsif !original.is_a?(BackingStoreParseNodeFactory)
         result = BackingStoreParseNodeFactory.new(original)
       end
       enable_backing_store_for_registry(ParseNodeFactoryRegistry.default_instance, BackingStoreParseNodeFactory)
