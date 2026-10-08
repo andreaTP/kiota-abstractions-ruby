@@ -168,6 +168,24 @@ RSpec.describe MicrosoftKiotaAbstractions::InMemoryBackingStore do
       expect(changed(user)).to eq(['business_phones'])
     end
 
+    it 'holds a model in its own property' do
+      expect { user.manager = user }.not_to raise_error
+      read(user)
+      user.name = 'Me'
+      expect(changed(user)).to contain_exactly('name', 'manager')
+    end
+
+    it 'holds two models that reference each other' do
+      boss = read(BackingStoreModels::User.new.tap { |m| m.id = 'm1' })
+      user.manager = boss
+      expect { boss.colleagues = [user] }.not_to raise_error
+      read(user)
+      read(boss)
+      boss.name = 'Boss'
+      expect(changed(user)).to eq(['manager'])
+      expect(changed(boss)).to contain_exactly('name', 'colleagues')
+    end
+
     it 'tracks a change inside a model in a collection' do
       colleague = read(BackingStoreModels::User.new.tap { |c| c.id = 'c1' })
       user.colleagues = [colleague]
