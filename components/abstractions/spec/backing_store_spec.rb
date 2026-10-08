@@ -21,11 +21,6 @@ end
 RSpec.describe MicrosoftKiotaAbstractions::InMemoryBackingStore do
   subject(:store) { described_class.new }
 
-  def read(model)
-    model.backing_store.initialization_completed = true
-    model
-  end
-
   it 'rejects an empty key' do
     expect { store.set('', 'x') }.to raise_error(ArgumentError)
     expect { store.get(nil) }.to raise_error(ArgumentError)
@@ -79,120 +74,132 @@ RSpec.describe MicrosoftKiotaAbstractions::InMemoryBackingStore do
     store.set('name', 'c')
     expect(calls).to eq([['name', nil, 'a'], %w[name a b]])
   end
+end
 
-  describe 'in a model' do
-    let(:user) do
-      read(BackingStoreModels::User.new.tap do |u|
-        u.id = 'u1'
-        u.business_phones = ['+1 234']
-      end)
-    end
+RSpec.describe 'an in-memory backing store in a model' do
+  def read(model)
+    model.backing_store.initialization_completed = true
+    model
+  end
 
-    def changed(model)
-      model.backing_store.return_only_changed_values = true
-      model.backing_store.enumerate.map(&:first)
-    ensure
-      model.backing_store.return_only_changed_values = false
-    end
+  let(:user) do
+    read(BackingStoreModels::User.new.tap do |u|
+      u.id = 'u1'
+      u.business_phones = ['+1 234']
+    end)
+  end
 
-    it 'tracks a property replaced after reading' do
-      user.name = 'Peter'
-      expect(changed(user)).to eq(['name'])
-    end
+  def changed(model)
+    model.backing_store.return_only_changed_values = true
+    model.backing_store.enumerate.map(&:first)
+  ensure
+    model.backing_store.return_only_changed_values = false
+  end
 
-    it 'returns a collection grown after reading when only changed values are asked for' do
-      user.business_phones << '+1 567'
-      user.backing_store.return_only_changed_values = true
-      expect(user.business_phones).to eq(['+1 234', '+1 567'])
-    end
+  it 'tracks a property replaced after reading' do
+    user.name = 'Peter'
+    expect(changed(user)).to eq(['name'])
+  end
 
-    it 'tracks an item appended to a collection' do
-      user.business_phones << '+1 567'
-      expect(changed(user)).to eq(['business_phones'])
-      expect(user.business_phones.size).to eq(2)
-    end
+  it 'returns a collection grown after reading when only changed values are asked for' do
+    user.business_phones << '+1 567'
+    user.backing_store.return_only_changed_values = true
+    expect(user.business_phones).to eq(['+1 234', '+1 567'])
+  end
 
-    it 'tracks a change inside a nested model' do
-      manager = read(BackingStoreModels::User.new.tap { |m| m.id = 'm1' })
-      user.manager = manager
-      read(user)
-      manager.name = 'Boss'
-      expect(changed(user)).to eq(['manager'])
-      expect(changed(manager)).to eq(['name'])
-    end
+  it 'tracks an item appended to a collection' do
+    user.business_phones << '+1 567'
+    expect(changed(user)).to eq(['business_phones'])
+    expect(user.business_phones.size).to eq(2)
+  end
 
-    it 'keeps the edits of a new model attached to a property' do
-      manager = BackingStoreModels::User.new.tap { |m| m.name = 'New boss' }
-      user.manager = manager
-      expect(changed(manager)).to eq(['name'])
-    end
+  it 'tracks a change inside a nested model' do
+    manager = read(BackingStoreModels::User.new.tap { |m| m.id = 'm1' })
+    user.manager = manager
+    read(user)
+    manager.name = 'Boss'
+    expect(changed(user)).to eq(['manager'])
+    expect(changed(manager)).to eq(['name'])
+  end
 
-    it 'stops following a nested model once it is replaced' do
-      old_manager = read(BackingStoreModels::User.new.tap { |m| m.id = 'm1' })
-      user.manager = old_manager
-      user.manager = read(BackingStoreModels::User.new.tap { |m| m.id = 'm2' })
-      read(user)
-      old_manager.name = 'Gone'
-      expect(changed(user)).to be_empty
-      expect(user.manager.id).to eq('m2')
-    end
+  it 'keeps the edits of a new model attached to a property' do
+    manager = BackingStoreModels::User.new.tap { |m| m.name = 'New boss' }
+    user.manager = manager
+    expect(changed(manager)).to eq(['name'])
+  end
 
-    it 'ignores a detached nested model edited after the store is cleared' do
-      manager = read(BackingStoreModels::User.new.tap { |m| m.id = 'm1' })
-      user.manager = manager
-      user.backing_store.clear
-      expect { manager.name = 'Gone' }.not_to raise_error
-      expect(user.backing_store.enumerate).to be_empty
-    end
+  it 'stops following a nested model once it is replaced' do
+    old_manager = read(BackingStoreModels::User.new.tap { |m| m.id = 'm1' })
+    user.manager = old_manager
+    user.manager = read(BackingStoreModels::User.new.tap { |m| m.id = 'm2' })
+    read(user)
+    old_manager.name = 'Gone'
+    expect(changed(user)).to be_empty
+    expect(user.manager.id).to eq('m2')
+  end
 
-    it 'follows a model appended to a collection it already holds' do
-      user.colleagues = []
-      read(user)
-      colleague = read(BackingStoreModels::User.new.tap { |c| c.id = 'c1' })
-      user.colleagues << colleague
-      expect(changed(user)).to eq(['colleagues'])
-      read(user)
-      colleague.name = 'Pal'
-      expect(changed(user)).to eq(['colleagues'])
-    end
+  it 'ignores a detached nested model edited after the store is cleared' do
+    manager = read(BackingStoreModels::User.new.tap { |m| m.id = 'm1' })
+    user.manager = manager
+    user.backing_store.clear
+    expect { manager.name = 'Gone' }.not_to raise_error
+    expect(user.backing_store.enumerate).to be_empty
+  end
 
-    it 'tracks an item replaced in place in a collection' do
-      user.business_phones[0] = '+9 999'
-      expect(changed(user)).to eq(['business_phones'])
-    end
+  it 'follows a model appended to a collection it already holds' do
+    user.colleagues = []
+    read(user)
+    colleague = read(BackingStoreModels::User.new.tap { |c| c.id = 'c1' })
+    user.colleagues << colleague
+    expect(changed(user)).to eq(['colleagues'])
+    read(user)
+    colleague.name = 'Pal'
+    expect(changed(user)).to eq(['colleagues'])
+  end
 
-    it 'tracks a collection reordered in place' do
-      user.business_phones = ['+1', '+2']
-      read(user)
-      user.business_phones.reverse!
-      expect(changed(user)).to eq(['business_phones'])
-    end
+  it 'tracks an item replaced in place in a collection' do
+    user.business_phones[0] = '+9 999'
+    expect(changed(user)).to eq(['business_phones'])
+  end
 
-    it 'holds a model in its own property' do
-      expect { user.manager = user }.not_to raise_error
-      read(user)
-      user.name = 'Me'
-      expect(changed(user)).to contain_exactly('name', 'manager')
-    end
+  it 'tracks an item of a collection edited in place' do
+    user.business_phones = [+'+1 234']
+    read(user)
+    user.business_phones[0].replace('+9 999')
+    expect(changed(user)).to eq(['business_phones'])
+  end
 
-    it 'holds two models that reference each other' do
-      boss = read(BackingStoreModels::User.new.tap { |m| m.id = 'm1' })
-      user.manager = boss
-      expect { boss.colleagues = [user] }.not_to raise_error
-      read(user)
-      read(boss)
-      boss.name = 'Boss'
-      expect(changed(user)).to eq(['manager'])
-      expect(changed(boss)).to contain_exactly('name', 'colleagues')
-    end
+  it 'tracks a collection reordered in place' do
+    user.business_phones = ['+1', '+2']
+    read(user)
+    user.business_phones.reverse!
+    expect(changed(user)).to eq(['business_phones'])
+  end
 
-    it 'tracks a change inside a model in a collection' do
-      colleague = read(BackingStoreModels::User.new.tap { |c| c.id = 'c1' })
-      user.colleagues = [colleague]
-      read(user)
-      colleague.name = 'Pal'
-      expect(changed(user)).to eq(['colleagues'])
-    end
+  it 'holds a model in its own property' do
+    expect { user.manager = user }.not_to raise_error
+    read(user)
+    user.name = 'Me'
+    expect(changed(user)).to contain_exactly('name', 'manager')
+  end
+
+  it 'holds two models that reference each other' do
+    boss = read(BackingStoreModels::User.new.tap { |m| m.id = 'm1' })
+    user.manager = boss
+    expect { boss.colleagues = [user] }.not_to raise_error
+    read(user)
+    read(boss)
+    boss.name = 'Boss'
+    expect(changed(user)).to eq(['manager'])
+    expect(changed(boss)).to contain_exactly('name', 'colleagues')
+  end
+
+  it 'tracks a change inside a model in a collection' do
+    colleague = read(BackingStoreModels::User.new.tap { |c| c.id = 'c1' })
+    user.colleagues = [colleague]
+    read(user)
+    colleague.name = 'Pal'
+    expect(changed(user)).to eq(['colleagues'])
   end
 end
 

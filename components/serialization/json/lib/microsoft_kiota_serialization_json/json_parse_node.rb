@@ -104,8 +104,8 @@ module MicrosoftKiotaSerializationJson
       raise StandardError, 'Factory cannot be null' if factory.nil?
 
       item = factory.call(self)
-      on_before_assign_field_values&.call(item)
       begin
+        on_before_assign_field_values&.call(item)
         assign_field_values(item)
       ensure
         on_after_assign_field_values&.call(item)

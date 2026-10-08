@@ -129,6 +129,27 @@ RSpec.describe 'a model with a backing store' do
     expect(user.phone).to eq('123')
   end
 
+  it 'keeps tracking changes when a callback the parse node already had raises' do
+    concrete = MicrosoftKiotaSerializationJson::JsonParseNodeFactory.new
+    concrete.define_singleton_method(:get_parse_node) do |content_type, content|
+      super(content_type, content).tap { |node| node.on_before_assign_field_values = ->(_) { raise 'broken' } }
+    end
+    created = nil
+    node = MicrosoftKiotaAbstractions::BackingStoreParseNodeFactory.new(concrete).get_parse_node('application/json', '{"name":"Ann"}')
+    expect { node.get_object_value(->(_) { created = BackedJsonModels::User.new }) }.to raise_error(RuntimeError)
+    expect(created.backing_store.initialization_completed).to be(true)
+  end
+
+  it 'reads every value again when a callback the writer already had raises' do
+    concrete = MicrosoftKiotaSerializationJson::JsonSerializationWriterFactory.new
+    concrete.define_singleton_method(:get_serialization_writer) do |content_type|
+      super(content_type).tap { |writer| writer.on_before_object_serialization = ->(_) { raise 'broken' } }
+    end
+    writer = MicrosoftKiotaAbstractions::BackingStoreSerializationWriterProxyFactory.new(concrete).get_serialization_writer('application/json')
+    expect { writer.write_object_value(nil, user) }.to raise_error(RuntimeError, 'broken')
+    expect(user.phone).to eq('123')
+  end
+
   it 'writes every value set on a new model' do
     fresh = BackedJsonModels::User.new
     fresh.id = 'n1'

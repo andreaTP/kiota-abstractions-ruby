@@ -89,7 +89,19 @@ module MicrosoftKiotaAbstractions
     end
 
     def snapshot_of(value)
-      value.dup if value.is_a?(Array) || value.is_a?(Hash)
+      case value
+      when Array then value.map { |item| snapshot_item(item) }
+      when Hash then value.transform_values { |item| snapshot_item(item) }
+      end
+    end
+
+    # copies what could be edited in place; a nested model is compared by identity and tracked by its own store
+    def snapshot_item(item)
+      case item
+      when Array, Hash then snapshot_of(item)
+      when String then item.frozen? ? item : item.dup
+      else item
+      end
     end
 
     # the nested models a property holds report their changes to it, for as long as they are in it
