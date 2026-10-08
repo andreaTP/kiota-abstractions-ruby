@@ -172,11 +172,15 @@ module MicrosoftKiotaSerializationJson
       temp.writer
     end
 
+    # the after hook runs even when writing the model raised, so callbacks can restore their state
     def serialize_object(value, writer)
       on_before_object_serialization&.call(value)
-      on_start_object_serialization&.call(value, writer)
-      value.serialize(writer)
-      on_after_object_serialization&.call(value)
+      begin
+        on_start_object_serialization&.call(value, writer)
+        value.serialize(writer)
+      ensure
+        on_after_object_serialization&.call(value)
+      end
     end
 
     # nested writers keep the callbacks so nested models write only their changes too

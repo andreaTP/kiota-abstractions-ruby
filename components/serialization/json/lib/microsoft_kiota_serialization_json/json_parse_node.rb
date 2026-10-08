@@ -105,8 +105,11 @@ module MicrosoftKiotaSerializationJson
 
       item = factory.call(self)
       on_before_assign_field_values&.call(item)
-      assign_field_values(item)
-      on_after_assign_field_values&.call(item)
+      begin
+        assign_field_values(item)
+      ensure
+        on_after_assign_field_values&.call(item)
+      end
       item
     rescue StandardError => e
       raise e.class, 'Error during deserialization'

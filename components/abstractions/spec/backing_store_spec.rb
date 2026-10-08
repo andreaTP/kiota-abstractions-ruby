@@ -91,6 +91,8 @@ RSpec.describe MicrosoftKiotaAbstractions::InMemoryBackingStore do
     def changed(model)
       model.backing_store.return_only_changed_values = true
       model.backing_store.enumerate.map(&:first)
+    ensure
+      model.backing_store.return_only_changed_values = false
     end
 
     it 'tracks a property replaced after reading' do
@@ -117,6 +119,53 @@ RSpec.describe MicrosoftKiotaAbstractions::InMemoryBackingStore do
       manager.name = 'Boss'
       expect(changed(user)).to eq(['manager'])
       expect(changed(manager)).to eq(['name'])
+    end
+
+    it 'keeps the edits of a new model attached to a property' do
+      manager = BackingStoreModels::User.new.tap { |m| m.name = 'New boss' }
+      user.manager = manager
+      expect(changed(manager)).to eq(['name'])
+    end
+
+    it 'stops following a nested model once it is replaced' do
+      old_manager = read(BackingStoreModels::User.new.tap { |m| m.id = 'm1' })
+      user.manager = old_manager
+      user.manager = read(BackingStoreModels::User.new.tap { |m| m.id = 'm2' })
+      read(user)
+      old_manager.name = 'Gone'
+      expect(changed(user)).to be_empty
+      expect(user.manager.id).to eq('m2')
+    end
+
+    it 'ignores a detached nested model edited after the store is cleared' do
+      manager = read(BackingStoreModels::User.new.tap { |m| m.id = 'm1' })
+      user.manager = manager
+      user.backing_store.clear
+      expect { manager.name = 'Gone' }.not_to raise_error
+      expect(user.backing_store.enumerate).to be_empty
+    end
+
+    it 'follows a model appended to a collection it already holds' do
+      user.colleagues = []
+      read(user)
+      colleague = read(BackingStoreModels::User.new.tap { |c| c.id = 'c1' })
+      user.colleagues << colleague
+      expect(changed(user)).to eq(['colleagues'])
+      read(user)
+      colleague.name = 'Pal'
+      expect(changed(user)).to eq(['colleagues'])
+    end
+
+    it 'tracks an item replaced in place in a collection' do
+      user.business_phones[0] = '+9 999'
+      expect(changed(user)).to eq(['business_phones'])
+    end
+
+    it 'tracks a collection reordered in place' do
+      user.business_phones = ['+1', '+2']
+      read(user)
+      user.business_phones.reverse!
+      expect(changed(user)).to eq(['business_phones'])
     end
 
     it 'tracks a change inside a model in a collection' do

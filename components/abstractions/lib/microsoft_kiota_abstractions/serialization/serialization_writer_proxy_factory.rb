@@ -21,20 +21,25 @@ module MicrosoftKiotaAbstractions
     end
 
     def get_serialization_writer(content_type)
-      writer = @concrete.get_serialization_writer(content_type)
+      wrap(@concrete.get_serialization_writer(content_type), @on_before, @on_after, @on_start)
+    end
+
+    protected
+
+    def wrap(writer, on_before, on_after, on_start)
       original_before = writer.on_before_object_serialization
       original_after = writer.on_after_object_serialization
       original_start = writer.on_start_object_serialization
       writer.on_before_object_serialization = lambda do |value|
-        @on_before&.call(value)
+        on_before&.call(value)
         original_before&.call(value)
       end
       writer.on_after_object_serialization = lambda do |value|
-        @on_after&.call(value)
+        on_after&.call(value)
         original_after&.call(value)
       end
       writer.on_start_object_serialization = lambda do |value, object_writer|
-        @on_start&.call(value, object_writer)
+        on_start&.call(value, object_writer)
         original_start&.call(value, object_writer)
       end
       writer

@@ -9,8 +9,8 @@ module MicrosoftKiotaAbstractions
   class InMemoryBackingStore
     include BackingStore
 
-    # changed: set after initialization completed; collection_size: the length of a collection when it was set
-    Entry = Struct.new(:changed, :value, :collection_size)
+    # changed: set after initialization completed; snapshot: a copy of a collection's items when it was set
+    Entry = Struct.new(:changed, :value, :snapshot)
 
     attr_reader :initialization_completed
     attr_accessor :return_only_changed_values
@@ -18,6 +18,7 @@ module MicrosoftKiotaAbstractions
     def initialize
       @store = {}
       @subscriptions = {}
+      @member_subscriptions = {}
       @initialization_completed = true
       @return_only_changed_values = false
     end
@@ -25,33 +26,31 @@ module MicrosoftKiotaAbstractions
     def initialization_completed=(value)
       @initialization_completed = value
       @store.each_key do |key|
-        each_backed_model(@store[key].value) { |model| model.backing_store.initialization_completed = value }
-        ensure_collection_size_is_consistent(key, @store[key])
+        backed_models(@store[key].value).each { |model| model.backing_store.initialization_completed = value }
+        ensure_collection_is_consistent(key)
         @store[key].changed = !value
       end
     end
 
     def get(key)
-      raise ArgumentError, 'key cannot be nil or empty' if key.nil? || key.empty?
-
+      validate(key)
       return unless @store.key?(key)
 
-      ensure_collection_size_is_consistent(key, @store[key])
+      ensure_collection_is_consistent(key)
       entry = @store[key]
       entry.value if !@return_only_changed_values || entry.changed
     end
 
     def set(key, value)
-      raise ArgumentError, 'key cannot be nil or empty' if key.nil? || key.empty?
-
+      validate(key)
       old_value = @store[key]&.value
-      subscribe_to(key, value) unless @store.key?(key) && old_value.equal?(value)
-      @store[key] = Entry.new(@initialization_completed, value, value.is_a?(Array) ? value.size : nil)
+      @store[key] = Entry.new(@initialization_completed, value, snapshot_of(value))
+      follow_members(key, value)
       @subscriptions.each_value { |callback| callback.call(key, old_value, value) }
     end
 
     def enumerate
-      @store.each { |key, entry| ensure_collection_size_is_consistent(key, entry) } if @return_only_changed_values
+      @store.each_key { |key| ensure_collection_is_consistent(key) } if @return_only_changed_values
       @store.select { |_, entry| !@return_only_changed_values || entry.changed }.map { |key, entry| [key, entry.value] }
     end
 
@@ -72,28 +71,46 @@ module MicrosoftKiotaAbstractions
     end
 
     def clear
+      @member_subscriptions.each_key.to_a.each { |key| follow_members(key, nil) }
       @store.clear
     end
 
     private
 
-    def each_backed_model(value, &)
-      models = value.is_a?(Array) ? value : [value]
-      models.select { |model| model.is_a?(BackedModel) && model.backing_store }.each(&)
+    def validate(key)
+      raise ArgumentError, 'key cannot be nil or empty' if key.nil? || key.empty?
     end
 
-    # a change inside a nested model marks the property holding it as changed
-    def subscribe_to(key, value)
-      each_backed_model(value) do |model|
-        model.backing_store.initialization_completed = true
-        model.backing_store.subscribe(->(_k, _old, _new) { set(key, value) })
-      end
+    def backed_models(value)
+      (value.is_a?(Array) ? value : [value]).select { |model| model.is_a?(BackedModel) && model.backing_store }
     end
 
-    # an item added to or removed from a stored collection, or a change inside a nested model, marks it as changed
-    def ensure_collection_size_is_consistent(key, entry)
-      each_backed_model(entry.value) { |model| model.backing_store.enumerate.map(&:first).each { |k| model.backing_store.get(k) } }
-      set(key, entry.value) if entry.value.is_a?(Array) && entry.value.size != entry.collection_size
+    def snapshot_of(value)
+      value.dup if value.is_a?(Array) || value.is_a?(Hash)
+    end
+
+    # the nested models a property holds report their changes to it, for as long as they are in it
+    def follow_members(key, value)
+      followed = @member_subscriptions[key] ||= {}.compare_by_identity
+      members = backed_models(value).to_h { |model| [model, true] }.compare_by_identity
+      followed.keys.reject { |model| members.key?(model) }.each { |model| model.backing_store.unsubscribe(followed.delete(model)) }
+      members.each_key { |model| followed[model] ||= model.backing_store.subscribe(->(*) { member_changed(key) }) }
+      @member_subscriptions.delete(key) if followed.empty?
+    end
+
+    def member_changed(key)
+      entry = @store[key]
+      return if entry.nil?
+
+      entry.changed = true if @initialization_completed
+      @subscriptions.each_value { |callback| callback.call(key, entry.value, entry.value) }
+    end
+
+    # a collection changed in place since it was set, or holding a changed model, is marked as changed
+    def ensure_collection_is_consistent(key)
+      entry = @store[key]
+      backed_models(entry.value).each { |model| model.backing_store.enumerate.map(&:first).each { |k| model.backing_store.get(k) } }
+      set(key, entry.value) unless entry.snapshot.nil? || entry.value == entry.snapshot
     end
   end
 end
