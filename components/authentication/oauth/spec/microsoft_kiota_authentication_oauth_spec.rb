@@ -90,4 +90,39 @@ RSpec.describe MicrosoftKiotaAuthenticationOAuth do
     expect(MicrosoftKiotaAuthenticationOAuth::AuthorizationCodeContext.new('tenant_id', 'client_id', 'client_secret',
                                                                            'redirect_uri').is_a?(MicrosoftKiotaAuthenticationOAuth::OAuthContext)).to eq(true)
   end
+
+  it 'returns nil when uri is nil or invalid for allowed hosts' do
+    context = MicrosoftKiotaAuthenticationOAuth::ClientCredentialContext.new(
+      'tenant_id', 'client_id', 'client_secret', {}
+    )
+    provider = MicrosoftKiotaAuthenticationOAuth::OAuthAccessTokenProvider.new(context, ['graph.microsoft.com'])
+
+    expect(provider.get_authorization_token(nil)).to be_nil
+    expect(provider.get_authorization_token('https://untrusted.com/v1.0')).to be_nil
+  end
+
+  it 'allows http on localhost and loopback addresses' do
+    context = MicrosoftKiotaAuthenticationOAuth::ClientCredentialContext.new(
+      'tenant_id', 'client_id', 'client_secret', {}
+    )
+    allow(context).to receive(:get_token).and_return(double('token', to_hash: {}, token: 'test_token'))
+
+    ['http://localhost:8080/v1.0', 'http://127.0.0.1:8080/v1.0', 'http://[::1]:8080/v1.0'].each do |url|
+      provider = MicrosoftKiotaAuthenticationOAuth::OAuthAccessTokenProvider.new(context, [])
+      fiber = provider.get_authorization_token(url)
+      expect(fiber).to be_a(Fiber)
+      expect(fiber.resume).to eq('test_token')
+    end
+  end
+
+  it 'raises error for non-https on non-localhost hosts' do
+    context = MicrosoftKiotaAuthenticationOAuth::ClientCredentialContext.new(
+      'tenant_id', 'client_id', 'client_secret', {}
+    )
+    provider = MicrosoftKiotaAuthenticationOAuth::OAuthAccessTokenProvider.new(context, ['graph.microsoft.com'])
+
+    expect do
+      provider.get_authorization_token('http://graph.microsoft.com/v1.0')
+    end.to raise_error(StandardError, 'Only https is supported')
+  end
 end
