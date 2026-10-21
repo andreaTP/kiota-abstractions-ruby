@@ -18,6 +18,10 @@ RSpec.describe MicrosoftKiotaAuthenticationOAuth::OAuthAccessTokenProvider do
     fiber_untrusted = provider.get_authorization_token('https://untrusted.com/v1.0')
     expect(fiber_untrusted).to be_a(Fiber)
     expect(fiber_untrusted.resume).to be_nil
+
+    fiber_http_external = provider.get_authorization_token('http://graph.microsoft.com/v1.0')
+    expect(fiber_http_external).to be_a(Fiber)
+    expect(fiber_http_external.resume).to be_nil
   end
 
   it 'allows http on localhost and loopback addresses with empty or explicit allowed hosts' do
@@ -32,11 +36,12 @@ RSpec.describe MicrosoftKiotaAuthenticationOAuth::OAuthAccessTokenProvider do
       expect(fiber_empty).to be_a(Fiber)
       expect(fiber_empty.resume).to eq('test_token')
 
-      host = URI(url).hostname || URI(url).host
-      provider_explicit = MicrosoftKiotaAuthenticationOAuth::OAuthAccessTokenProvider.new(context, [host])
-      fiber_explicit = provider_explicit.get_authorization_token(url)
-      expect(fiber_explicit).to be_a(Fiber)
-      expect(fiber_explicit.resume).to eq('test_token')
+      provider_external_only = MicrosoftKiotaAuthenticationOAuth::OAuthAccessTokenProvider.new(
+        context, ['graph.microsoft.com']
+      )
+      fiber_external = provider_external_only.get_authorization_token(url)
+      expect(fiber_external).to be_a(Fiber)
+      expect(fiber_external.resume).to eq('test_token')
     end
   end
 
@@ -51,17 +56,6 @@ RSpec.describe MicrosoftKiotaAuthenticationOAuth::OAuthAccessTokenProvider do
         provider.get_authorization_token(url)
       end.to raise_error(StandardError, 'Only https is supported')
     end
-  end
-
-  it 'raises error for non-https on non-localhost hosts' do
-    context = MicrosoftKiotaAuthenticationOAuth::ClientCredentialContext.new(
-      'tenant_id', 'client_id', 'client_secret', {}
-    )
-    provider = MicrosoftKiotaAuthenticationOAuth::OAuthAccessTokenProvider.new(context, ['graph.microsoft.com'])
-
-    expect do
-      provider.get_authorization_token('http://graph.microsoft.com/v1.0')
-    end.to raise_error(StandardError, 'Only https is supported')
   end
 
   it 'leaves request unauthenticated when host is not allowed via OAuthAuthenticationProvider' do
