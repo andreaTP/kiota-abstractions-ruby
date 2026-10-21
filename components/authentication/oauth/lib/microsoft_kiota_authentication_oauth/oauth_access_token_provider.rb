@@ -12,6 +12,8 @@ require_relative 'contexts/oauth_custom_flow'
 module MicrosoftKiotaAuthenticationOAuth
   # Access Token Provider class implementation
   class OAuthAccessTokenProvider
+    LOCALHOST_STRINGS = ['localhost', '::1', '[::1]', '127.0.0.1'].freeze
+
     # This is the initializer for OAuthAccessTokenProvider.
     # :params
     #   token_request_context: a instance of one of our token request context or a custom implementation
@@ -48,11 +50,11 @@ module MicrosoftKiotaAuthenticationOAuth
     #   additional_params: hash of symbols to string values, ie { response_mode: 'fragment', prompt: 'login' }
     #                      default is empty hash
     def get_authorization_token(uri, _additional_properties = {})
-      nil if !uri || !@host_validator.url_host_valid?(uri)
+      return nil if !uri || !@host_validator.url_host_valid?(uri)
 
       parsed_url = URI(uri)
 
-      raise StandardError, 'Only https is supported' if parsed_url.scheme != 'https'
+      raise StandardError, 'Only https is supported' if parsed_url.scheme != 'https' && !localhost?(parsed_url)
 
       @scopes << "#{parsed_url.scheme}://#{parsed_url.host}/.default" if @scopes.empty?
       @token_request_context.initialize_scopes(@scopes)
@@ -83,5 +85,14 @@ module MicrosoftKiotaAuthenticationOAuth
     protected
 
     attr_writer :host_validator, :token_credential, :scopes, :cached_token
+
+    private
+
+    def localhost?(parsed_url)
+      host = parsed_url.hostname || parsed_url.host
+      return false if host.nil?
+
+      LOCALHOST_STRINGS.include?(host.downcase)
+    end
   end
 end
