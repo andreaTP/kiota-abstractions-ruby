@@ -54,15 +54,17 @@ module MicrosoftKiotaAuthenticationOAuth
 
       begin
         parsed_url = URI(uri)
-      rescue URI::InvalidURIError
+      rescue URI::InvalidURIError, ArgumentError
         return Fiber.new { nil }
       end
 
       return Fiber.new { nil } if parsed_url.nil? || parsed_url.host.nil?
 
-      is_localhost = localhost?(parsed_url)
-      return Fiber.new { nil } if !is_localhost && !@host_validator.url_host_valid?(uri)
+      https_version = parsed_url.dup
+      https_version.scheme = 'https'
+      return Fiber.new { nil } unless @host_validator.url_host_valid?(https_version.to_s)
 
+      is_localhost = localhost?(parsed_url)
       is_https = parsed_url.scheme == 'https'
       is_http_localhost = parsed_url.scheme == 'http' && is_localhost
       raise StandardError, 'Only https is supported' unless is_https || is_http_localhost
