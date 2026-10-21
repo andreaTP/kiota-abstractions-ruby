@@ -90,5 +90,4 @@ RSpec.describe MicrosoftKiotaAuthenticationOAuth do
     expect(MicrosoftKiotaAuthenticationOAuth::AuthorizationCodeContext.new('tenant_id', 'client_id', 'client_secret',
                                                                            'redirect_uri').is_a?(MicrosoftKiotaAuthenticationOAuth::OAuthContext)).to eq(true)
   end
-
 end
