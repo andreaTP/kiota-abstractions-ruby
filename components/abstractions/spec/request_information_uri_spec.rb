@@ -64,4 +64,13 @@ RSpec.describe MicrosoftKiotaAbstractions::AllowedHostsValidator do
     expect { validator.allowed_hosts = ['https://bad.com'] }.to raise_error(ArgumentError)
     expect(validator.url_host_valid?('https://anything.com')).to be(false)
   end
+
+  it 'validates host regardless of scheme' do
+    validator = described_class.new(['example.com', 'localhost'])
+    expect(validator.url_host_valid?('http://example.com')).to be(true)
+    expect(validator.url_host_valid?('http://localhost:8080')).to be(true)
+    expect(validator.url_host_valid?('https://example.com')).to be(true)
+    expect(validator.url_host_valid?('https://other.com')).to be(false)
+    expect(validator.url_host_valid?('http://other.com')).to be(false)
+  end
 end

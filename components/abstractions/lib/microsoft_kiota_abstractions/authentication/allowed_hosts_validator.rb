@@ -24,18 +24,20 @@ module MicrosoftKiotaAbstractions
 
     # checks whether the provided host is valid
     def url_host_valid?(url)
+      return false if url.nil?
       return true if @allowed_hosts.empty?
 
       parsed_url = URI(url)
       return false if parsed_url.host.nil?
 
-      return false unless parsed_url.is_a?(URI::HTTPS)
-
       hostname = parsed_url.host.downcase
-      return true if @allowed_hosts.key? hostname
+      return true if @allowed_hosts.key?(hostname)
+
+      stripped_host = hostname.delete_prefix('[').delete_suffix(']')
+      return true if @allowed_hosts.key?(stripped_host)
 
       @allowed_hosts.any? { |allowed_host, _| allowed_host.start_with?('.') && hostname.end_with?(allowed_host) }
-    rescue URI::InvalidURIError
+    rescue URI::InvalidURIError, ArgumentError
       false
     end
 

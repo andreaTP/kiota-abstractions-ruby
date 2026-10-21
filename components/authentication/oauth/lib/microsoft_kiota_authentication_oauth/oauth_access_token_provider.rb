@@ -50,11 +50,13 @@ module MicrosoftKiotaAuthenticationOAuth
     #   additional_params: hash of symbols to string values, ie { response_mode: 'fragment', prompt: 'login' }
     #                      default is empty hash
     def get_authorization_token(uri, _additional_properties = {})
-      return nil if !uri || !@host_validator.url_host_valid?(uri)
+      return Fiber.new { nil } if !uri || uri.to_s.empty? || !@host_validator.url_host_valid?(uri)
 
       parsed_url = URI(uri)
 
-      raise StandardError, 'Only https is supported' if parsed_url.scheme != 'https' && !localhost?(parsed_url)
+      is_https = parsed_url.scheme == 'https'
+      is_http_localhost = parsed_url.scheme == 'http' && localhost?(parsed_url)
+      raise StandardError, 'Only https is supported' unless is_https || is_http_localhost
 
       @scopes << "#{parsed_url.scheme}://#{parsed_url.host}/.default" if @scopes.empty?
       @token_request_context.initialize_scopes(@scopes)

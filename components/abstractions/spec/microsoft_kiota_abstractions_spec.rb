@@ -47,6 +47,16 @@ RSpec.describe MicrosoftKiotaAbstractions do
     expect(request_obj.headers.get(MicrosoftKiotaAbstractions::BaseBearerTokenAuthenticationProvider::AUTHORIZATION_HEADER_KEY).at(0)).to eq "Bearer #{AccessTokenProviderMock::DUMMY_TOKEN}"
   end
 
+  it 'safely handles nil token or nil fiber from access token provider' do
+    nil_provider = double('AccessTokenProvider', get_authorization_token: nil)
+    token_provider = MicrosoftKiotaAbstractions::BaseBearerTokenAuthenticationProvider.new(nil_provider)
+    request_obj = MicrosoftKiotaAbstractions::RequestInformation.new
+    request_obj.uri = 'https://example.com'
+    header_key = MicrosoftKiotaAbstractions::BaseBearerTokenAuthenticationProvider::AUTHORIZATION_HEADER_KEY
+    expect { token_provider.authenticate_request(request_obj).resume }.not_to raise_error
+    expect(request_obj.headers.get_all.key?(header_key)).to be(false)
+  end
+
   it 'returns the raw URI when set via setter' do
     request_obj = MicrosoftKiotaAbstractions::RequestInformation.new
     request_obj.path_parameters['term'] = 'search'
