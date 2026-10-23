@@ -102,10 +102,15 @@ module MicrosoftKiotaAuthenticationOAuth
     private
 
     def localhost?(parsed_url)
-      host = parsed_url.hostname || parsed_url.host
+      host = parsed_url.host
       return false if host.nil?
 
-      LOCALHOST_STRINGS.include?(host.downcase)
+      return true if LOCALHOST_STRINGS.include?(host.downcase)
+
+      hostname = parsed_url.hostname
+      return false if hostname.nil?
+
+      LOCALHOST_STRINGS.include?(hostname.downcase)
     end
   end
 end

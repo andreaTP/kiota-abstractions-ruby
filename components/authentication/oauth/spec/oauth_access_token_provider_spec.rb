@@ -53,13 +53,14 @@ RSpec.describe MicrosoftKiotaAuthenticationOAuth::OAuthAccessTokenProvider do
       expect(fiber_empty).to be_a(Fiber)
       expect(fiber_empty.resume).to eq('test_token')
 
-      stripped_host = host.delete_prefix('[').delete_suffix(']')
-      provider_allowlisted = MicrosoftKiotaAuthenticationOAuth::OAuthAccessTokenProvider.new(
-        context, [stripped_host]
-      )
-      fiber_allowlisted = provider_allowlisted.get_authorization_token(url)
-      expect(fiber_allowlisted).to be_a(Fiber)
-      expect(fiber_allowlisted.resume).to eq('test_token')
+      [host, host.delete_prefix('[').delete_suffix(']')].uniq.each do |allowed_entry|
+        provider_allowlisted = MicrosoftKiotaAuthenticationOAuth::OAuthAccessTokenProvider.new(
+          context, [allowed_entry]
+        )
+        fiber_allowlisted = provider_allowlisted.get_authorization_token(url)
+        expect(fiber_allowlisted).to be_a(Fiber)
+        expect(fiber_allowlisted.resume).to eq('test_token')
+      end
     end
   end
 

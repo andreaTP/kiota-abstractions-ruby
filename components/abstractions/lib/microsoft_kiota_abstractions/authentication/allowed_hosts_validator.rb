@@ -37,11 +37,14 @@ module MicrosoftKiotaAbstractions
 
       return true if @allowed_hosts.empty?
 
-      hostname = (parsed_url.hostname || parsed_url.host).downcase
-      return true if @allowed_hosts.key?(hostname)
+      host = parsed_url.host.downcase
+      return true if @allowed_hosts.key?(host)
 
-      stripped_host = hostname.delete_prefix('[').delete_suffix(']')
+      stripped_host = host.delete_prefix('[').delete_suffix(']')
       return true if @allowed_hosts.key?(stripped_host)
+
+      hostname = (parsed_url.hostname || host).downcase
+      return true if @allowed_hosts.key?(hostname)
 
       @allowed_hosts.any? { |allowed_host, _| allowed_host.start_with?('.') && hostname.end_with?(allowed_host) }
     rescue URI::InvalidURIError
@@ -54,10 +57,15 @@ module MicrosoftKiotaAbstractions
     private
 
     def localhost?(parsed_url)
-      host = parsed_url.hostname || parsed_url.host
+      host = parsed_url.host
       return false if host.nil?
 
-      LOCALHOST_STRINGS.include?(host.downcase)
+      return true if LOCALHOST_STRINGS.include?(host.downcase)
+
+      hostname = parsed_url.hostname
+      return false if hostname.nil?
+
+      LOCALHOST_STRINGS.include?(hostname.downcase)
     end
   end
 end
