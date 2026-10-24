@@ -45,6 +45,54 @@ RSpec.describe MicrosoftKiotaAuthenticationOAuth::OAuthAccessTokenProvider do
     end
   end
 
+  context 'with request-derived default scopes' do
+    let(:allowed_hosts) { %w[one.example.com two.example.com] }
+    let(:provider) { described_class.new(context, allowed_hosts) }
+    let(:tokens) do
+      [
+        instance_double(OAuth2::AccessToken, token: 'one_token', to_hash: {}),
+        instance_double(OAuth2::AccessToken, token: 'two_token', to_hash: {})
+      ]
+    end
+
+    it 'derives the default scope for each request without mutating configured scopes' do
+      allow(context).to receive(:get_token).and_return(*tokens)
+
+      expect(provider.get_authorization_token('https://one.example.com').resume).to eq('one_token')
+      expect(provider.get_authorization_token('https://two.example.com').resume).to eq('two_token')
+
+      expect(context).to have_received(:initialize_scopes).with(['https://one.example.com/.default'])
+      expect(context).to have_received(:initialize_scopes).with(['https://two.example.com/.default'])
+      expect(context).to have_received(:get_token).twice
+      expect(provider.scopes).to eq([])
+    end
+
+    it 'reuses a cached token only for its effective scopes' do
+      one_token = OAuth2::AccessToken.new(context.oauth_provider, 'one_token', expires_in: 3600)
+      two_token = OAuth2::AccessToken.new(context.oauth_provider, 'two_token', expires_in: 3600)
+      allow(context).to receive(:get_token).and_return(one_token, two_token)
+
+      expect(provider.get_authorization_token('https://one.example.com').resume).to eq('one_token')
+      expect(provider.get_authorization_token('https://two.example.com').resume).to eq('two_token')
+      expect(provider.get_authorization_token('https://one.example.com').resume).to eq('one_token')
+
+      expect(context).to have_received(:get_token).twice
+    end
+
+    it 'does not mutate explicitly configured scopes' do
+      configured_scopes = ['https://resource.example.com/.default']
+      explicit_provider = described_class.new(context, allowed_hosts, configured_scopes)
+
+      expect(explicit_provider.scopes).to eq(configured_scopes)
+      expect(explicit_provider.scopes).not_to equal(configured_scopes)
+      explicit_provider.get_authorization_token('https://one.example.com').resume
+
+      expect(explicit_provider.scopes).to eq(configured_scopes)
+      expect(configured_scopes).to eq(['https://resource.example.com/.default'])
+      expect(context).to have_received(:initialize_scopes).with(configured_scopes)
+    end
+  end
+
   it 'leaves a request to a host outside the allowed hosts without an authorization header' do
     authentication_provider = MicrosoftKiotaAuthenticationOAuth::OAuthAuthenticationProvider.new(
       context, allowed_hosts, ['https://api.example.com/.default']
