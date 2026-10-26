@@ -29,7 +29,7 @@ module MicrosoftKiotaAuthenticationOAuth
               'Parameter token_request_context must be an instance of one of our grant flow context classes.'
       end
 
-      @cached_token = nil
+      @cached_tokens = {}
 
       @host_validator = if allowed_hosts.nil? || allowed_hosts.empty?
                           MicrosoftKiotaAbstractions::AllowedHostsValidator.new([])
@@ -40,7 +40,7 @@ module MicrosoftKiotaAuthenticationOAuth
       @scopes = if scopes.nil?
                   []
                 else
-                  scopes
+                  scopes.dup
                 end
     end
 
@@ -50,13 +50,7 @@ module MicrosoftKiotaAuthenticationOAuth
     #   additional_params: hash of symbols to string values, ie { response_mode: 'fragment', prompt: 'login' }
     #                      default is empty hash
     def get_authorization_token(uri, _additional_properties = {})
-      return Fiber.new { nil } if !uri || uri.to_s.empty?
-
-      begin
-        parsed_url = URI(uri)
-      rescue URI::InvalidURIError, ArgumentError
-        return Fiber.new { nil }
-      end
+      return Fiber.new { nil } if !uri || !@host_validator.url_host_valid?(uri)
 
       return Fiber.new { nil } if parsed_url.nil? || parsed_url.host.nil?
 
@@ -69,27 +63,32 @@ module MicrosoftKiotaAuthenticationOAuth
       is_http_localhost = parsed_url.scheme == 'http' && is_localhost
       raise StandardError, 'Only https is supported' unless is_https || is_http_localhost
 
-      @scopes << "#{parsed_url.scheme}://#{parsed_url.host}/.default" if @scopes.empty?
-      @token_request_context.initialize_scopes(@scopes)
+      effective_scopes = @scopes.empty? ? ["#{parsed_url.scheme}://#{parsed_url.host}/.default"] : @scopes.dup
+      cache_key = effective_scopes.freeze
       Fiber.new do
-        if @cached_token
-          token = OAuth2::AccessToken.from_hash(@token_request_context.oauth_provider, @cached_token)
-          token.token unless token.nil? || token.expired?
-
-          if token.expired?
+        @token_request_context.initialize_scopes(effective_scopes)
+        token_value = nil
+        cached_token = @cached_tokens[cache_key]
+        unless cached_token.nil?
+          token = OAuth2::AccessToken.from_hash(@token_request_context.oauth_provider, cached_token)
+          if token && !token.expired?
+            token_value = token.token
+          elsif token
             token = token.refresh!
-            @cached_token = token.to_hash
-            token.token
+            @cached_tokens[cache_key] = token.to_hash
+            token_value = token.token
           end
         end
 
-        nil
-        token = @token_request_context.get_token
-
-        unless token.nil?
-          @cached_token = token.to_hash
-          token.token
+        if token_value.nil?
+          token = @token_request_context.get_token
+          unless token.nil?
+            @cached_tokens[cache_key] = token.to_hash
+            token_value = token.token
+          end
         end
+
+        token_value
       end
     end
 
@@ -97,20 +96,6 @@ module MicrosoftKiotaAuthenticationOAuth
 
     protected
 
-    attr_writer :host_validator, :token_credential, :scopes, :cached_token
-
-    private
-
-    def localhost?(parsed_url)
-      host = parsed_url.host
-      return false if host.nil?
-
-      return true if LOCALHOST_STRINGS.include?(host.downcase)
-
-      hostname = parsed_url.hostname
-      return false if hostname.nil?
-
-      LOCALHOST_STRINGS.include?(hostname.downcase)
-    end
+    attr_writer :host_validator, :token_credential, :scopes, :cached_tokens
   end
 end
