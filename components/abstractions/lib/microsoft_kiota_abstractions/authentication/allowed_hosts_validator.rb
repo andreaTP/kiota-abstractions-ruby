@@ -28,7 +28,12 @@ module MicrosoftKiotaAbstractions
     def url_host_valid?(url)
       return false if url.nil?
 
-      parsed_url = URI(url)
+      begin
+        parsed_url = URI(url)
+      rescue URI::InvalidURIError, ArgumentError
+        return false
+      end
+
       return false if parsed_url.host.nil?
 
       is_https = parsed_url.is_a?(URI::HTTPS)
@@ -47,15 +52,9 @@ module MicrosoftKiotaAbstractions
       return true if @allowed_hosts.key?(hostname)
 
       @allowed_hosts.any? { |allowed_host, _| allowed_host.start_with?('.') && hostname.end_with?(allowed_host) }
-    rescue URI::InvalidURIError
-      false
     end
 
-    # gets the list of valid hosts
-    attr_reader :allowed_hosts
-
-    private
-
+    # checks whether the host in the parsed url is a loopback/localhost address
     def localhost?(parsed_url)
       host = parsed_url.host
       return false if host.nil?
@@ -67,5 +66,8 @@ module MicrosoftKiotaAbstractions
 
       LOCALHOST_STRINGS.include?(hostname.downcase)
     end
+
+    # gets the list of valid hosts
+    attr_reader :allowed_hosts
   end
 end

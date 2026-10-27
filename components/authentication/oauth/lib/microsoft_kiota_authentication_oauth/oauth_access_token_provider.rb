@@ -12,7 +12,7 @@ require_relative 'contexts/oauth_custom_flow'
 module MicrosoftKiotaAuthenticationOAuth
   # Access Token Provider class implementation
   class OAuthAccessTokenProvider
-    LOCALHOST_STRINGS = ['localhost', '::1', '[::1]', '127.0.0.1'].freeze
+    LOCALHOST_STRINGS = MicrosoftKiotaAbstractions::AllowedHostsValidator::LOCALHOST_STRINGS
 
     # This is the initializer for OAuthAccessTokenProvider.
     # :params
@@ -50,17 +50,24 @@ module MicrosoftKiotaAuthenticationOAuth
     #   additional_params: hash of symbols to string values, ie { response_mode: 'fragment', prompt: 'login' }
     #                      default is empty hash
     def get_authorization_token(uri, _additional_properties = {})
-      return Fiber.new { nil } if !uri || !@host_validator.url_host_valid?(uri)
+      return Fiber.new { nil } if !uri || uri.to_s.empty?
 
-      return Fiber.new { nil } if parsed_url.nil? || parsed_url.host.nil?
+      begin
+        parsed_url = URI(uri)
+      rescue URI::InvalidURIError, ArgumentError
+        return Fiber.new { nil }
+      end
+
+      return Fiber.new { nil } if parsed_url.nil? || parsed_url.host.nil? || parsed_url.host.empty?
 
       https_version = parsed_url.dup
       https_version.scheme = 'https'
       return Fiber.new { nil } unless @host_validator.url_host_valid?(https_version.to_s)
 
       is_localhost = localhost?(parsed_url)
-      is_https = parsed_url.scheme == 'https'
-      is_http_localhost = parsed_url.scheme == 'http' && is_localhost
+      scheme = parsed_url.scheme&.downcase
+      is_https = scheme == 'https'
+      is_http_localhost = scheme == 'http' && is_localhost
       raise StandardError, 'Only https is supported' unless is_https || is_http_localhost
 
       effective_scopes = @scopes.empty? ? ["#{parsed_url.scheme}://#{parsed_url.host}/.default"] : @scopes.dup
@@ -97,5 +104,23 @@ module MicrosoftKiotaAuthenticationOAuth
     protected
 
     attr_writer :host_validator, :token_credential, :scopes, :cached_tokens
+
+    private
+
+    def localhost?(parsed_url)
+      if @host_validator.respond_to?(:localhost?)
+        @host_validator.localhost?(parsed_url)
+      else
+        host = parsed_url.host
+        return false if host.nil?
+
+        return true if LOCALHOST_STRINGS.include?(host.downcase)
+
+        hostname = parsed_url.hostname
+        return false if hostname.nil?
+
+        LOCALHOST_STRINGS.include?(hostname.downcase)
+      end
+    end
   end
 end
