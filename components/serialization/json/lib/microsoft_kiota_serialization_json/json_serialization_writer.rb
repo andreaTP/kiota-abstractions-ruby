@@ -205,6 +205,13 @@ module MicrosoftKiotaSerializationJson
       @writer[key] = serialized
     end
 
+    # a composed type wrapper writes its scalar as the root value, which a nested object hash would drop
+    def write_parsable_value(key, value)
+      return write_object_value(nil, value) unless key
+
+      @writer[key] = serialized_scalar(value)
+    end
+
     public
 
     def serialized_scalar(value)
@@ -227,7 +234,7 @@ module MicrosoftKiotaSerializationJson
       when UUIDTools::UUID then write_guid_value(key, value)
       when Array then write_collection_of_primitive_values(key, value)
       when Hash then write_hash_value(key, value)
-      when MicrosoftKiotaAbstractions::Parsable then write_object_value(key, value)
+      when MicrosoftKiotaAbstractions::Parsable then write_parsable_value(key, value)
       else raise StandardError, "Encountered an unknown type during serialization #{value.class} with key #{key}"
       end
     end

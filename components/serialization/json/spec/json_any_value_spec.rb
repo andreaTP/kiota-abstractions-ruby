@@ -18,6 +18,14 @@ module AnyValueModels
   end
 
   class Label < String; end
+
+  # a composed type wrapper holding a scalar writes it as the root value
+  class Wrapper
+    include MicrosoftKiotaAbstractions::Parsable
+
+    def get_field_deserializers = {}
+    def serialize(writer) = writer.write_string_value(nil, 'hello')
+  end
 end
 
 RSpec.describe 'serializing any value' do
@@ -74,6 +82,10 @@ RSpec.describe 'serializing any value' do
 
     it 'writes a model as a nested object' do
       expect(serialized('owner' => AnyValueModels::Named.new('x'))).to eq({ 'owner' => { 'name' => 'x' } })
+    end
+
+    it 'writes a wrapper holding a scalar as that scalar' do
+      expect(serialized('direct' => AnyValueModels::Wrapper.new)).to eq({ 'direct' => 'hello' })
     end
 
     it 'converts the values in a collection' do
