@@ -52,50 +52,16 @@ module MicrosoftKiotaAuthenticationOAuth
     def get_authorization_token(uri, _additional_properties = {})
       return Fiber.new { nil } if !uri || uri.to_s.empty?
 
-      begin
-        parsed_url = URI(uri)
-      rescue URI::InvalidURIError, ArgumentError
-        return Fiber.new { nil }
-      end
+      parsed_url = parse_uri(uri)
+      return Fiber.new { nil } if parsed_url.nil? || !valid_host?(parsed_url)
 
-      return Fiber.new { nil } if parsed_url.nil? || parsed_url.host.nil? || parsed_url.host.empty?
+      validate_scheme!(parsed_url)
 
-      https_version = parsed_url.dup
-      https_version.scheme = 'https'
-      return Fiber.new { nil } unless @host_validator.url_host_valid?(https_version.to_s)
-
-      is_localhost = localhost?(parsed_url)
-      scheme = parsed_url.scheme&.downcase
-      is_https = scheme == 'https'
-      is_http_localhost = scheme == 'http' && is_localhost
-      raise StandardError, 'Only https is supported' unless is_https || is_http_localhost
-
-      effective_scopes = @scopes.empty? ? ["#{parsed_url.scheme}://#{parsed_url.host}/.default"] : @scopes.dup
+      effective_scopes = determine_scopes(parsed_url)
       cache_key = effective_scopes.freeze
       Fiber.new do
         @token_request_context.initialize_scopes(effective_scopes)
-        token_value = nil
-        cached_token = @cached_tokens[cache_key]
-        unless cached_token.nil?
-          token = OAuth2::AccessToken.from_hash(@token_request_context.oauth_provider, cached_token)
-          if token && !token.expired?
-            token_value = token.token
-          elsif token
-            token = token.refresh!
-            @cached_tokens[cache_key] = token.to_hash
-            token_value = token.token
-          end
-        end
-
-        if token_value.nil?
-          token = @token_request_context.get_token
-          unless token.nil?
-            @cached_tokens[cache_key] = token.to_hash
-            token_value = token.token
-          end
-        end
-
-        token_value
+        fetch_token(cache_key)
       end
     end
 
@@ -106,6 +72,59 @@ module MicrosoftKiotaAuthenticationOAuth
     attr_writer :host_validator, :token_credential, :scopes, :cached_tokens
 
     private
+
+    def parse_uri(uri)
+      parsed = URI(uri)
+      return nil if parsed.nil? || parsed.host.nil? || parsed.host.empty?
+
+      parsed
+    rescue URI::InvalidURIError, ArgumentError
+      nil
+    end
+
+    def valid_host?(parsed_url)
+      https_version = parsed_url.dup
+      https_version.scheme = 'https'
+      @host_validator.url_host_valid?(https_version.to_s)
+    end
+
+    def validate_scheme!(parsed_url)
+      scheme = parsed_url.scheme&.downcase
+      return if scheme == 'https' || (scheme == 'http' && localhost?(parsed_url))
+
+      raise StandardError, 'Only https is supported'
+    end
+
+    def determine_scopes(parsed_url)
+      @scopes.empty? ? ["#{parsed_url.scheme}://#{parsed_url.host}/.default"] : @scopes.dup
+    end
+
+    def fetch_token(cache_key)
+      token_value = nil
+      cached_token = @cached_tokens[cache_key]
+      token_value = resolve_cached_token(cached_token, cache_key) unless cached_token.nil?
+
+      if token_value.nil?
+        token = @token_request_context.get_token
+        unless token.nil?
+          @cached_tokens[cache_key] = token.to_hash
+          token_value = token.token
+        end
+      end
+
+      token_value
+    end
+
+    def resolve_cached_token(cached_token, cache_key)
+      token = OAuth2::AccessToken.from_hash(@token_request_context.oauth_provider, cached_token)
+      return nil unless token
+
+      if token.expired?
+        token = token.refresh!
+        @cached_tokens[cache_key] = token.to_hash
+      end
+      token.token
+    end
 
     def localhost?(parsed_url)
       if @host_validator.respond_to?(:localhost?)
